@@ -358,7 +358,7 @@ const avaImg=(e)=>e.photo?`<img src="${e.photo}" referrerpolicy="no-referrer" on
 let curRange='today',curMetric='sales',AGG=[],pollTimer=null,rtTimer=null,channel=null;
 const METRICS={
   sales:{unit:'฿',color:'var(--green)',val:a=>a.sales,fmt:v=>baht(v),sub:a=>`${a.bills} บิล · AOV ${a.paidBills?baht(a.sales/a.paidBills):'-'}`,keep:a=>a.calls>0||a.bills>0},
-  talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>hms(v),sub:a=>`${a.calls} สาย · ${a.qual?hms(a.talk/a.qual):'-'}/สายคุย`,keep:a=>a.calls>0},
+  talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>hms(v),sub:a=>`เฉลี่ย ${hms(a.talk/(a.days||1))}/วัน · ${Math.round(a.calls/(a.days||1))} สาย/วัน · รวม ${a.calls} สาย`,keep:a=>a.calls>0},
   avgtalk:{unit:'/สายคุย',color:'var(--amber)',val:a=>a.qual?a.talk/a.qual:0,fmt:v=>hms(v),sub:a=>`${a.qual} สายคุย · รวม ${hms(a.talk)}`,keep:a=>a.qual>0},
   answer:{unit:'%',color:'var(--blue)',val:a=>a.calls?a.answered/a.calls*100:0,fmt:v=>v.toFixed(0)+'%',sub:a=>`รับ ${a.answered}/${a.calls} สาย`,keep:a=>a.calls>0},
   aov:{unit:'฿/บิล',color:'var(--violet)',val:a=>a.paidBills?a.sales/a.paidBills:0,fmt:v=>baht(v),sub:a=>`${a.paidBills} บิลมียอด · ${baht(a.sales)}฿`,keep:a=>a.paidBills>0},
@@ -374,11 +374,12 @@ async function load(){
       fetchRange('calls','employee_id,contact_result,duration_sec,has_recording,created_at',r),
       fetchRange('sales','employee_id,amount,created_at',r),
       fetchRange('upsells','employee_id,amount,created_at',r)]);
-    const m={},A=id=>(m[id]=m[id]||{id,calls:0,answered:0,talk:0,qual:0,bills:0,paidBills:0,sales:0,upcnt:0,upsum:0});
-    calls.forEach(c=>{const a=A(c.employee_id);a.calls++;a.talk+=(c.duration_sec||0);if(c.contact_result==='รับสาย'){a.answered++;if(c.has_recording)a.qual++;}});
+    const m={},A=id=>(m[id]=m[id]||{id,calls:0,answered:0,talk:0,qual:0,bills:0,paidBills:0,sales:0,upcnt:0,upsum:0,dayset:new Set()});
+    calls.forEach(c=>{const a=A(c.employee_id);a.calls++;a.talk+=(c.duration_sec||0);if(c.contact_result==='รับสาย'){a.answered++;if(c.has_recording)a.qual++;}a.dayset.add(new Date(c.created_at).toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'}));});
     sales.forEach(s=>{const a=A(s.employee_id);const amt=Number(s.amount)||0;a.bills++;if(amt>0)a.paidBills++;a.sales+=amt;});
     ups.forEach(u=>{const a=A(u.employee_id);a.upcnt++;a.upsum+=Number(u.amount)||0;});
     AGG=Object.values(m);
+    AGG.forEach(a=>a.days=a.dayset.size||1);   // จำนวนวันที่มีสายจริง → ใช้หาเฉลี่ย/วัน
     renderKpis(); renderRank();
     document.getElementById('upd').textContent='อัปเดต '+new Date().toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',second:'2-digit'});
     setupLive(r.live);
