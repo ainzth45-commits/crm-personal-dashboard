@@ -87,15 +87,29 @@ main{padding:20px 0 40px}
 .team-pill:hover{background:rgba(255,255,255,.08);color:var(--ink)}
 .team-pill.active{color:#fff;border-color:transparent;background:var(--tc,#6d5cf0);box-shadow:0 6px 18px -4px var(--tc)}
 
+/* CYCLE PICKER (รอบบิล 26-25: เลือกปี+เดือน) */
+.cyclepick{display:none;align-items:center;gap:6px;margin-left:2px}
+.cyclepick.active{display:inline-flex}   /* โชว์เฉพาะตอนอยู่โหมดรอบบิล */
+.cyclepick select{font-family:inherit;font-size:.9rem;font-weight:600;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
+.cyclepick select:focus{outline:none;border-color:var(--violet)}
+
+/* LOADING SPINNER (overlay บนกระดานอันดับ) */
+#boardLoad{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,11,22,.5);backdrop-filter:blur(2px);z-index:20;border-radius:20px}
+#boardLoad.on{display:flex}
+.spinner{width:46px;height:46px;border:4px solid rgba(255,255,255,.14);border-top-color:var(--violet);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* TABS */
 .tabs{display:flex;gap:9px;margin-bottom:18px;flex-wrap:wrap}
 .tabs button{font-family:inherit;font-size:.96rem;font-weight:600;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink2);padding:11px 20px;border-radius:13px;cursor:pointer;transition:.16s;display:flex;align-items:center;gap:9px}
 .tabs button:hover{transform:translateY(-2px);color:var(--ink)}
 .tabs button .d{width:10px;height:10px;border-radius:50%;background:var(--ac);box-shadow:0 0 10px var(--ac)}
 .tabs button.active{color:#fff;border-color:transparent;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1.5px var(--ac),0 8px 20px -6px var(--ac)}
+.tabs .cycle-only{display:none}
+.tabs.cycle .cycle-only{display:flex}
 
 /* BOARD: ซ้าย featured | ขวา list */
-.board{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;align-items:stretch}
+.board{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;align-items:stretch;position:relative}
 .feat{display:flex;flex-direction:column;gap:14px}
 .pod-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .pod{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:20px;position:relative;overflow:hidden;animation:rise .4s ease both}
@@ -260,8 +274,9 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
       <button data-r="yesterday">เมื่อวาน</button>
       <button data-r="7d">7 วัน</button>
       <button data-r="monthcal">เดือนนี้</button>
-      <button data-r="month">รอบบิล 26–25</button>
+      <button id="cycleBtn" type="button"><i class="fa-solid fa-calendar-week"></i> รอบบิล</button>
     </div>
+    <div class="cyclepick" id="cyclePick"><select id="cycYear"></select><select id="cycMonth"></select></div>
     <button class="pick-btn" id="pickBtn"><i class="fa-solid fa-calendar-days"></i>เลือกช่วง</button>
   </div>
   <input id="picker" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
@@ -284,11 +299,14 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
     <button data-m="answer" style="--ac:var(--blue)"><span class="d"></span>รับสาย %</button>
     <button data-m="aov" style="--ac:var(--violet)"><span class="d"></span>AOV</button>
     <button data-m="upsell" style="--ac:#ff7eb3"><span class="d"></span>ยอดอัพเซล</button>
+    <button data-m="talkday" class="cycle-only" style="--ac:var(--teal)"><span class="d"></span>Talktime/วัน</button>
+    <button data-m="callday" class="cycle-only" style="--ac:var(--blue)"><span class="d"></span>สายโทร/วัน</button>
   </div>
 
   <div class="board">
     <div class="feat" id="feat"></div>
     <div class="rest" id="rest"><div class="rest-inner" id="restScroll"><div class="msg"><i class="fa-solid fa-spinner fa-spin"></i>กำลังโหลด...</div></div></div>
+    <div id="boardLoad"><div class="spinner"></div></div>
   </div>
 </div></main>
 
@@ -314,8 +332,15 @@ function rangeOf(key){
   if(key==='month')     return {start:startISO(billingStart()),end:startISO(addYMD(t,1)),label:'รอบบิล '+billingStart()+' → วันนี้',live:false};
   return null;
 }
-let customR=null;
-function getRange(){return curRange==='custom'?customR:rangeOf(curRange);}
+let customR=null, cycleR=null;
+const THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+// รอบบิลของ "เดือน m ปี y" = 26 ของเดือนก่อนหน้า → 25 ของเดือน m
+function cycleRange(y,m){
+  let sy=y,sm=m-1; if(sm<1){sm=12;sy--;}
+  return {start:startISO(`${sy}-${pad(sm)}-26`), end:startISO(`${y}-${pad(m)}-26`),
+          label:`รอบ ${THMON[m-1]} ${y} · 26/${sm} – 25/${m}`, live:false};
+}
+function getRange(){ return curRange==='cycle'?cycleR : (curRange==='custom'?customR : rangeOf(curRange)); }
 
 async function fetchRange(table,cols,r){
   let out=[],from=0,size=1000;
@@ -358,32 +383,36 @@ const avaImg=(e)=>e.photo?`<img src="${e.photo}" referrerpolicy="no-referrer" on
 let curRange='today',curMetric='sales',AGG=[],pollTimer=null,rtTimer=null,channel=null;
 const METRICS={
   sales:{unit:'฿',color:'var(--green)',val:a=>a.sales,fmt:v=>baht(v),sub:a=>`${a.bills} บิล · AOV ${a.paidBills?baht(a.sales/a.paidBills):'-'}`,keep:a=>a.calls>0||a.bills>0},
-  talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>hms(v),sub:a=>`เฉลี่ย ${hms(a.talk/(a.days||1))}/วัน · ${Math.round(a.calls/(a.days||1))} สาย/วัน · รวม ${a.calls} สาย`,keep:a=>a.calls>0},
-  avgtalk:{unit:'/สายคุย',color:'var(--amber)',val:a=>a.qual?a.talk/a.qual:0,fmt:v=>hms(v),sub:a=>`${a.qual} สายคุย · รวม ${hms(a.talk)}`,keep:a=>a.qual>0},
+  talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>msmm(v),sub:a=>`เฉลี่ย ${msmm(a.talk/(a.days||1))}/วัน · ${Math.round(a.calls/(a.days||1))} สาย/วัน · รวม ${a.calls} สาย`,keep:a=>a.calls>0},
+  avgtalk:{unit:'/สายคุย',color:'var(--amber)',val:a=>a.qual?a.talk/a.qual:0,fmt:v=>msmm(v),sub:a=>`${a.qual} สายคุย · รวม ${msmm(a.talk)}`,keep:a=>a.qual>0},
   answer:{unit:'%',color:'var(--blue)',val:a=>a.calls?a.answered/a.calls*100:0,fmt:v=>v.toFixed(0)+'%',sub:a=>`รับ ${a.answered}/${a.calls} สาย`,keep:a=>a.calls>0},
   aov:{unit:'฿/บิล',color:'var(--violet)',val:a=>a.paidBills?a.sales/a.paidBills:0,fmt:v=>baht(v),sub:a=>`${a.paidBills} บิลมียอด · ${baht(a.sales)}฿`,keep:a=>a.paidBills>0},
   upsell:{unit:'฿',color:'#ff7eb3',val:a=>a.upsum,fmt:v=>baht(v),sub:a=>`${a.upcnt} ครั้ง · เฉลี่ย ${a.upcnt?baht(a.upsum/a.upcnt):'-'}`,keep:a=>a.upsum>0},
+  talkday:{unit:'/วัน',color:'var(--teal)',val:a=>a.talk/(a.days||1),fmt:v=>msmm(v),sub:a=>`${a.days} วันทำงาน · รวม ${msmm(a.talk)}`,keep:a=>a.calls>0},
+  callday:{unit:'สาย/วัน',color:'var(--blue)',val:a=>a.calls/(a.days||1),fmt:v=>Math.round(v),sub:a=>`${a.days} วันทำงาน · รวม ${a.calls} สาย`,keep:a=>a.calls>0},
 };
 
-async function load(){
+let _loadSeq=0;
+function showLoading(b){const el=document.getElementById('boardLoad');if(el)el.classList.toggle('on',b);}
+// รวมยอดฝั่ง server (RPC dashboard_agg) → ดึง ~25 แถวแทนแถวดิบหลักหมื่น = เร็ว
+// silent=true → ไม่โชว์ spinner (ใช้ตอน realtime/poll auto-refresh กันกระพริบ)
+async function load(silent){
   const r=getRange(); if(!r)return;
   setErr(''); document.getElementById('rangeLabel').textContent=r.label;
+  const seq=++_loadSeq;                 // กันผลลัพธ์ช่วงเก่ามาทับตอนสลับเร็วๆ
+  if(!silent) showLoading(true);
   try{
     if(!Object.keys(EMP).length)await loadEmployees();
-    const [calls,sales,ups]=await Promise.all([
-      fetchRange('calls','employee_id,contact_result,duration_sec,has_recording,created_at',r),
-      fetchRange('sales','employee_id,amount,created_at',r),
-      fetchRange('upsells','employee_id,amount,created_at',r)]);
-    const m={},A=id=>(m[id]=m[id]||{id,calls:0,answered:0,talk:0,qual:0,bills:0,paidBills:0,sales:0,upcnt:0,upsum:0,dayset:new Set()});
-    calls.forEach(c=>{const a=A(c.employee_id);a.calls++;a.talk+=(c.duration_sec||0);if(c.contact_result==='รับสาย'){a.answered++;if(c.has_recording)a.qual++;}a.dayset.add(new Date(c.created_at).toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'}));});
-    sales.forEach(s=>{const a=A(s.employee_id);const amt=Number(s.amount)||0;a.bills++;if(amt>0)a.paidBills++;a.sales+=amt;});
-    ups.forEach(u=>{const a=A(u.employee_id);a.upcnt++;a.upsum+=Number(u.amount)||0;});
-    AGG=Object.values(m);
-    AGG.forEach(a=>a.days=a.dayset.size||1);   // จำนวนวันที่มีสายจริง → ใช้หาเฉลี่ย/วัน
+    const {data,error}=await sb.rpc('dashboard_agg',{p_start:r.start,p_end:r.end});
+    if(error)throw error;
+    if(seq!==_loadSeq)return;            // มี load ใหม่กว่าแล้ว → ทิ้งผลเก่า
+    AGG=(data||[]).map(a=>({id:a.employee_id,calls:a.calls,answered:a.answered,talk:Number(a.talk)||0,qual:a.qual,
+      bills:a.bills,paidBills:a.paid_bills,sales:Number(a.sales)||0,upcnt:a.upcnt,upsum:Number(a.upsum)||0,days:a.active_days||1}));
     renderKpis(); renderRank();
     document.getElementById('upd').textContent='อัปเดต '+new Date().toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',second:'2-digit'});
     setupLive(r.live);
   }catch(e){setErr('โหลดข้อมูลไม่สำเร็จ: '+e.message);console.error(e);}
+  finally{ if(seq===_loadSeq) showLoading(false); }
 }
 
 // ===== smooth helpers =====
@@ -508,17 +537,18 @@ function setupLive(isLive){
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'calls'},onRt)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'sales'},onRt)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'upsells'},onRt).subscribe();
-    pollTimer=setInterval(()=>{if(curRange==='today')load();},30000);
+    pollTimer=setInterval(()=>{if(curRange==='today')load(true);},30000);
   }else{live.classList.remove('on');tx.textContent='snapshot';}
 }
-function onRt(){clearTimeout(rtTimer);rtTimer=setTimeout(()=>{if(curRange==='today')load();},1200);}
+function onRt(){clearTimeout(rtTimer);rtTimer=setTimeout(()=>{if(curRange==='today')load(true);},1200);}
 function setErr(m){const e=document.getElementById('err');e.style.display=m?'block':'none';e.textContent=m;}
 
 // events
-document.querySelectorAll('#ranges button').forEach(b=>b.addEventListener('click',()=>{
+document.querySelectorAll('#ranges button[data-r]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#ranges button').forEach(x=>x.classList.remove('active'));
   document.getElementById('pickBtn').classList.remove('active');
   b.classList.add('active');curRange=b.dataset.r;
+  exitCycle();
   setPeriodLabel(b.textContent.trim()); closePeriodMenu();   // มือถือ: อัปเดตปุ่มยุบ + ปิดเมนู
   load();
 }));
@@ -526,7 +556,45 @@ document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');curMetric=b.dataset.m;renderRank();
 }));
-document.getElementById('refresh').addEventListener('click',load);
+document.getElementById('refresh').addEventListener('click',()=>load());
+
+// ── Cycle picker (รอบบิล 26-25: เลือกปี + เดือน) ──
+const cYear=document.getElementById('cycYear'), cMonth=document.getElementById('cycMonth');
+[2025,2026].forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;cYear.appendChild(o);});
+THMON.forEach((nm,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=nm;cMonth.appendChild(o);});
+(function(){const[ty,tm,td]=todayYMD().split('-').map(Number);let by=ty,bm=tm;if(td>=26){bm=tm+1;if(bm>12){bm=1;by++;}}cYear.value=by;cMonth.value=bm;})();
+let lastCycleKey='';
+function setCycleTabs(on){
+  document.getElementById('tabs').classList.toggle('cycle',on);
+  if(!on && (curMetric==='talkday'||curMetric==='callday')){   // ออกโหมด → เด้งกลับ talk
+    curMetric='talk';
+    document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.m==='talk'));
+  }
+}
+function exitCycle(){
+  document.getElementById('cyclePick').classList.remove('active');
+  document.getElementById('cycleBtn').classList.remove('active');
+  lastCycleKey=''; setCycleTabs(false);
+}
+function applyCycle(){
+  const y=+cYear.value, m=+cMonth.value, key=y+'-'+m;
+  if(curRange==='cycle' && key===lastCycleKey) return;   // เลือกเดิม ไม่ต้องโหลดซ้ำ
+  lastCycleKey=key; cycleR=cycleRange(y,m); curRange='cycle';
+  document.querySelectorAll('#ranges button').forEach(x=>x.classList.remove('active'));
+  document.getElementById('cycleBtn').classList.add('active');
+  document.getElementById('pickBtn').classList.remove('active');
+  document.getElementById('cyclePick').classList.add('active');
+  setCycleTabs(true);
+  setPeriodLabel('รอบ '+THMON[m-1]+' '+y); closePeriodMenu();
+  load();
+}
+// ปุ่มรอบบิล → เข้าโหมด + default รอบบิลล่าสุด + โชว์ dropdown
+document.getElementById('cycleBtn').addEventListener('click',()=>{
+  const[ty,tm,td]=todayYMD().split('-').map(Number);let by=ty,bm=tm;if(td>=26){bm=tm+1;if(bm>12){bm=1;by++;}}
+  cYear.value=by; cMonth.value=bm; lastCycleKey=''; applyCycle();
+});
+cYear.addEventListener('change',applyCycle);
+cMonth.addEventListener('change',applyCycle);
 
 const fp=flatpickr('#picker',{mode:'range',dateFormat:'Y-m-d',maxDate:todayYMD(),positionElement:document.getElementById('pickBtn'),
   onOpen:()=>{ fp.set('maxDate', todayYMD()); },   // refresh ทุกครั้งที่เปิด กัน maxDate ค้างวันเก่า (เปิดหน้าข้ามวัน)
@@ -534,7 +602,7 @@ const fp=flatpickr('#picker',{mode:'range',dateFormat:'Y-m-d',maxDate:todayYMD()
     const f=(d)=>d.toLocaleString('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'});
     const d1=f(sel[0]),d2=f(sel[1]);
     customR={start:startISO(d1),end:startISO(addYMD(d2,1)),label:'ช่วง '+d1+' → '+d2,live:false};
-    curRange='custom';
+    curRange='custom'; exitCycle();
     document.querySelectorAll('#ranges button').forEach(x=>x.classList.remove('active'));
     document.getElementById('pickBtn').classList.add('active');
     setPeriodLabel('ช่วงที่เลือก'); closePeriodMenu();   // มือถือ
