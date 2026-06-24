@@ -79,6 +79,14 @@ main{padding:20px 0 40px}
 .kpi .v small{font-family:'Kanit',sans-serif;font-size:1.2rem;color:var(--muted);font-weight:600;letter-spacing:0}
 .kpi .sub{font-size:.86rem;color:var(--muted);margin-top:8px;position:relative}
 
+/* TEAM SELECTOR */
+.teambar{padding:14px 22px 0}
+.teambar .wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.teambar .tlabel{font-size:.82rem;color:var(--muted);font-weight:600;margin-right:4px}
+.team-pill{font-family:inherit;font-size:.9rem;font-weight:600;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink2);padding:8px 16px;border-radius:999px;cursor:pointer;transition:.16s;white-space:nowrap}
+.team-pill:hover{background:rgba(255,255,255,.08);color:var(--ink)}
+.team-pill.active{color:#fff;border-color:transparent;background:var(--tc,#6d5cf0);box-shadow:0 6px 18px -4px var(--tc)}
+
 /* TABS */
 .tabs{display:flex;gap:9px;margin-bottom:18px;flex-wrap:wrap}
 .tabs button{font-family:inherit;font-size:.96rem;font-weight:600;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink2);padding:11px 20px;border-radius:13px;cursor:pointer;transition:.16s;display:flex;align-items:center;gap:9px}
@@ -262,6 +270,8 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   <button class="iconbtn" id="refresh" title="รีเฟรช"><i class="fa-solid fa-rotate"></i></button>
 </div></div>
 
+<div class="teambar"><div class="wrap" id="teamSel"></div></div>
+
 <main><div class="wrap">
   <div class="err" id="err"></div>
 
@@ -316,7 +326,28 @@ async function fetchRange(table,cols,r){
   return out;
 }
 let EMP={};
-async function loadEmployees(){const{data,error}=await sb.from('employees').select('employee_id,name,photo_url');if(error)throw error;data.forEach(e=>EMP[e.employee_id]={name:e.name,photo:e.photo_url});}
+async function loadEmployees(){const{data,error}=await sb.from('employees').select('employee_id,name,photo_url,team_id');if(error)throw error;data.forEach(e=>EMP[e.employee_id]={name:e.name,photo:e.photo_url,team_id:e.team_id});}
+
+// ── ตัวเลือกทีม (null = ทั้งหมด) · กรองฝั่ง client จาก EMP[id].team_id ──
+let TEAMS=[],curTeam=null;
+const teamMatch=a=>curTeam==null||(EMP[a.id]&&EMP[a.id].team_id===curTeam);
+async function loadTeams(){
+  const{data,error}=await sb.from('teams').select('id,name,color').order('sort_order');
+  if(error){console.error('teams:',error);return;}
+  TEAMS=data||[]; renderTeamSel();
+}
+function renderTeamSel(){
+  const el=document.getElementById('teamSel'); if(!el)return;
+  const btn=(id,label,color)=>`<button class="team-pill ${curTeam===id?'active':''}" data-team="${id==null?'':id}" style="--tc:${color}">${label}</button>`;
+  el.innerHTML='<span class="tlabel">ทีม</span>'+btn(null,'ทั้งหมด','#6d5cf0')+TEAMS.map(t=>btn(t.id,t.name,t.color||'#6d5cf0')).join('');
+  el.querySelectorAll('.team-pill').forEach(b=>b.addEventListener('click',()=>{
+    const v=b.dataset.team, next=v===''?null:Number(v);
+    if(next===curTeam)return;
+    curTeam=next; renderTeamSel();
+    // กรองจากข้อมูลที่โหลดมาแล้ว — ไม่ต้อง refetch
+    if(AGG.length){ renderKpis(); renderRank(); }
+  }));
+}
 
 const baht=n=>Math.round(n).toLocaleString('en-US');
 const hms=s=>{s=Math.round(s||0);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h?`${h}:${pad(m)}:${pad(x)}`:`${m}:${pad(x)}`;};
@@ -361,8 +392,9 @@ function setNum(el,to,fmt,instant){if(!el)return;const from=instant?to:(el._c==n
 
 let _kpiInit=false,_firstKpi=true,_podInit=false,rowMap={},lastMetric=null;
 function renderKpis(){
-  const T=AGG.reduce((o,a)=>({bills:o.bills+a.bills,paid:o.paid+a.paidBills,sales:o.sales+a.sales,closers:o.closers}),{bills:0,paid:0,sales:0,closers:0});
-  const closers=AGG.filter(a=>a.paidBills>0).length;
+  const A=AGG.filter(teamMatch);
+  const T=A.reduce((o,a)=>({bills:o.bills+a.bills,paid:o.paid+a.paidBills,sales:o.sales+a.sales,closers:o.closers}),{bills:0,paid:0,sales:0,closers:0});
+  const closers=A.filter(a=>a.paidBills>0).length;
   const aov=T.paid?T.sales/T.paid:0;
   if(!_kpiInit){
     document.getElementById('kpis').innerHTML=`
@@ -456,7 +488,7 @@ function renderList(rest,max,M,instant,startRank){
 }
 function renderRank(){
   const M=METRICS[curMetric];
-  const list=AGG.filter(M.keep).map(a=>({a,v:M.val(a)})).filter(o=>curMetric==='answer'?o.a.calls>0:o.v>0).sort((p,q)=>q.v-p.v);
+  const list=AGG.filter(teamMatch).filter(M.keep).map(a=>({a,v:M.val(a)})).filter(o=>curMetric==='answer'?o.a.calls>0:o.v>0).sort((p,q)=>q.v-p.v);
   const max=Math.max(1,...list.map(o=>o.v));
   const instant=lastMetric!==curMetric;lastMetric=curMetric;
   if(!list.length){document.getElementById('feat').innerHTML='';_podInit=false;Object.keys(rowMap).forEach(id=>rowMap[id].remove());rowMap={};document.getElementById('restScroll').innerHTML='<div class="msg"><i class="fa-solid fa-inbox"></i>ยังไม่มีข้อมูลในช่วงนี้</div>';return;}
@@ -521,8 +553,9 @@ document.addEventListener('click',e=>{ if(periodEl.classList.contains('open') &&
 matchMedia('(max-width:700px)').addEventListener('change',()=>{ if(window.__dashUnlocked){ try{ renderRank(); }catch(e){} } });
 
 // บูตเฉพาะเมื่อปลดล็อกรหัสผ่านแล้ว (gate ด้านบนเป็นคนสั่ง) — ไม่ดึงข้อมูลก่อนใส่รหัส
-window.__startDash=load;
-if(window.__dashUnlocked)load();
+function boot(){ loadTeams(); load(); }
+window.__startDash=boot;
+if(window.__dashUnlocked)boot();
 </script>
 </body>
 </html>
