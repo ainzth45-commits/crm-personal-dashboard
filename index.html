@@ -146,6 +146,24 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 .flatpickr-calendar{font-family:'Kanit'}
 @media(max-width:880px){.kpis{grid-template-columns:1fr}.board{grid-template-columns:1fr}.brand h1{font-size:1.25rem}.kpi .v{font-size:2.5rem}.rest{overflow:visible;min-height:0}.rest-inner{position:static;max-height:65vh}}
 @media(max-width:560px){.pod-1{flex-direction:column;text-align:center}.pod-1 .num{font-size:2rem}}
+/* มือถือ: Hero #1 + ลิสต์ยาว (ซ่อนการ์ดคู่ #2/#3 → ย้ายเข้าลิสต์แทน ผ่าน podCount ใน JS) */
+@media(max-width:700px){
+  .wrap{padding:0 14px}
+  .pod-pair{display:none}
+  .pod-1{padding:20px 18px}
+  .pod-1 .pod-top{gap:16px}
+  .pod-1 .ava{width:88px;height:88px;font-size:2.1rem;border-width:2.5px}
+  .pod-1 .nm{font-size:1.4rem}
+  .pod-1 .num{font-size:2.5rem;margin:8px 0 5px}
+  .pod-1 .pu{font-size:1rem}
+  .pod-1 .stat-strip{grid-template-columns:repeat(3,1fr);gap:11px 10px;margin-top:14px;padding-top:14px}
+  .pod-1 .st .sl{font-size:.64rem}
+  .pod-1 .st .sv{font-size:.95rem}
+  .tabs{gap:7px}.tabs button{padding:9px 14px;font-size:.9rem}
+  .kpi .v{font-size:2.1rem}
+  .row{gap:10px;padding:9px 10px}
+  .val{min-width:84px}.val .n{font-size:1.05rem}
+}
 </style>
 </head>
 <body>
@@ -397,16 +415,17 @@ function updateRow(el,o,rank,max,M,instant){
   el.querySelector('.val .u').textContent=M.unit;
   setNum(n,o.v,v=>M.fmt(v),instant);
 }
-function renderList(rest,max,M,instant){
+function renderList(rest,max,M,instant,startRank){
+  startRank=startRank||4;   // เดสก์ท็อปเริ่มที่ #4 · มือถือเริ่มที่ #2 (podCount=1)
   const cont=document.getElementById('restScroll');
   const msg=cont.querySelector('.msg');if(msg)msg.remove();
   const order=rest.map(o=>o.a.id),oset=new Set(order);
   Object.keys(rowMap).forEach(id=>{if(!oset.has(id)){rowMap[id].remove();delete rowMap[id];}});
   const fresh=new Set();
-  rest.forEach((o,i)=>{let el=rowMap[o.a.id];if(!el){el=buildRow(o.a.id);rowMap[o.a.id]=el;cont.appendChild(el);fresh.add(o.a.id);}updateRow(el,o,i+4,max,M,instant);});
+  rest.forEach((o,i)=>{let el=rowMap[o.a.id];if(!el){el=buildRow(o.a.id);rowMap[o.a.id]=el;cont.appendChild(el);fresh.add(o.a.id);}updateRow(el,o,i+startRank,max,M,instant);});
   const domOrder=[...cont.querySelectorAll('.row')].map(c=>c.dataset.id);
   const changed=fresh.size>0||domOrder.length!==order.length||domOrder.some((id,i)=>id!==order[i]);
-  if(rest.length===0){ if(!cont.querySelector('.msg')){const d=document.createElement('div');d.className='msg';d.style.padding='30px';d.textContent='— มีผู้ทำผลงานในมุมนี้ ≤3 คน —';cont.appendChild(d);} return; }
+  if(rest.length===0){ if(!cont.querySelector('.msg')){const d=document.createElement('div');d.className='msg';d.style.padding='30px';d.textContent='— ไม่มีอันดับถัดไป —';cont.appendChild(d);} return; }
   if(!changed)return;
   const first={};[...cont.querySelectorAll('.row')].forEach(el=>{if(!fresh.has(el.dataset.id))first[el.dataset.id]=el.getBoundingClientRect().top;});
   order.forEach(id=>cont.appendChild(rowMap[id]));
@@ -418,8 +437,10 @@ function renderRank(){
   const max=Math.max(1,...list.map(o=>o.v));
   const instant=lastMetric!==curMetric;lastMetric=curMetric;
   if(!list.length){document.getElementById('feat').innerHTML='';_podInit=false;Object.keys(rowMap).forEach(id=>rowMap[id].remove());rowMap={};document.getElementById('restScroll').innerHTML='<div class="msg"><i class="fa-solid fa-inbox"></i>ยังไม่มีข้อมูลในช่วงนี้</div>';return;}
-  renderPodium(list.slice(0,3),M,instant);
-  renderList(list.slice(3),max,M,instant);
+  // มือถือ (≤700px): โพเดียมเหลือ #1 อย่างเดียว แล้ว #2→ท้าย เป็นลิสต์ยาว · เดสก์ท็อป: โพเดียม #1-3 + ลิสต์ #4+
+  const podCount=matchMedia('(max-width:700px)').matches?1:3;
+  renderPodium(list.slice(0,podCount),M,instant);
+  renderList(list.slice(podCount),max,M,instant,podCount+1);
 }
 
 function setupLive(isLive){
@@ -461,6 +482,9 @@ const fp=flatpickr('#picker',{mode:'range',dateFormat:'Y-m-d',maxDate:todayYMD()
     load();
   }}});
 document.getElementById('pickBtn').addEventListener('click',()=>fp.open());
+
+// สลับ layout เมื่อข้ามจุด 700px (หมุนจอ/ย่อ-ขยาย) → render อันดับใหม่ให้ #2/#3 เข้า-ออกลิสต์
+matchMedia('(max-width:700px)').addEventListener('change',()=>{ if(window.__dashUnlocked){ try{ renderRank(); }catch(e){} } });
 
 // บูตเฉพาะเมื่อปลดล็อกรหัสผ่านแล้ว (gate ด้านบนเป็นคนสั่ง) — ไม่ดึงข้อมูลก่อนใส่รหัส
 window.__startDash=load;
