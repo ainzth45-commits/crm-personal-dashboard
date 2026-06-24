@@ -53,6 +53,13 @@ body{font-family:'Kanit',sans-serif;color:var(--ink);min-height:100vh;-webkit-fo
 .pick-btn{border-style:dashed}
 .pick-btn.active{background:linear-gradient(135deg,#6d5cf0,#8b5cf6);color:#fff;border-style:solid;border-color:transparent;box-shadow:0 8px 22px rgba(109,92,240,.4)}
 .pick-btn i{margin-right:7px}
+/* ปุ่มยุบช่วงเวลา (เฉพาะมือถือ) — เดสก์ท็อปซ่อน, เมนูแสดงผลปกติ */
+#periodTrigger{display:none}
+#periodMenu{display:contents}
+.period-trigger{font-family:inherit;font-size:.92rem;font-weight:600;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer;align-items:center;gap:10px}
+.period-trigger>i:first-child{color:var(--violet)}
+.period-trigger .caret{margin-left:auto;font-size:.72rem;color:var(--ink2);transition:transform .22s}
+.period.open .period-trigger .caret{transform:rotate(180deg)}
 .spacer{flex:1}
 .upd{font-size:.78rem;color:var(--muted);white-space:nowrap}
 .iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink2);cursor:pointer;transition:.16s}
@@ -163,6 +170,19 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   .kpi .v{font-size:2.1rem}
   .row{gap:10px;padding:9px 10px}
   .val{min-width:84px}.val .n{font-size:1.05rem}
+  /* ช่วงเวลา: โชว์ปุ่มเดียว (ค่าที่เลือก) + ที่เหลืออยู่ในเมนู dropdown */
+  .period .wrap{position:relative;flex-wrap:nowrap}
+  #periodTrigger{display:inline-flex;flex:1;min-width:0}
+  #periodCurrent{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #periodMenu{display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:60;
+    flex-direction:column;gap:7px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 22px 55px rgba(0,0,0,.55)}
+  .period.open #periodMenu{display:flex}
+  #periodMenu .seg{flex-direction:column;gap:7px}
+  #periodMenu .seg button,#periodMenu .pick-btn{width:100%;text-align:left;padding:12px 14px;font-size:.96rem;border-style:solid}
+  .spacer{display:none}
+  /* ลิสต์อันดับ: ขยายสุด ไม่เลื่อนในกล่อง (ใช้ scroll ของหน้าแทน) */
+  .rest{overflow:visible;min-height:0}
+  .rest-inner{position:static;max-height:none;overflow:visible;padding:4px 0}
 }
 </style>
 </head>
@@ -225,14 +245,17 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 </div></header>
 
 <div class="period"><div class="wrap">
-  <div class="seg" id="ranges">
-    <button data-r="today" class="active">วันนี้</button>
-    <button data-r="yesterday">เมื่อวาน</button>
-    <button data-r="7d">7 วัน</button>
-    <button data-r="monthcal">เดือนนี้</button>
-    <button data-r="month">รอบบิล 26–25</button>
+  <button class="period-trigger" id="periodTrigger" type="button"><i class="fa-solid fa-calendar-days"></i><span id="periodCurrent">วันนี้</span><i class="fa-solid fa-chevron-down caret"></i></button>
+  <div id="periodMenu">
+    <div class="seg" id="ranges">
+      <button data-r="today" class="active">วันนี้</button>
+      <button data-r="yesterday">เมื่อวาน</button>
+      <button data-r="7d">7 วัน</button>
+      <button data-r="monthcal">เดือนนี้</button>
+      <button data-r="month">รอบบิล 26–25</button>
+    </div>
+    <button class="pick-btn" id="pickBtn"><i class="fa-solid fa-calendar-days"></i>เลือกช่วง</button>
   </div>
-  <button class="pick-btn" id="pickBtn"><i class="fa-solid fa-calendar-days"></i>เลือกช่วง</button>
   <input id="picker" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
   <div class="spacer"></div>
   <span class="upd" id="upd"></span>
@@ -462,7 +485,9 @@ function setErr(m){const e=document.getElementById('err');e.style.display=m?'blo
 document.querySelectorAll('#ranges button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#ranges button').forEach(x=>x.classList.remove('active'));
   document.getElementById('pickBtn').classList.remove('active');
-  b.classList.add('active');curRange=b.dataset.r;load();
+  b.classList.add('active');curRange=b.dataset.r;
+  setPeriodLabel(b.textContent.trim()); closePeriodMenu();   // มือถือ: อัปเดตปุ่มยุบ + ปิดเมนู
+  load();
 }));
 document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
@@ -479,9 +504,18 @@ const fp=flatpickr('#picker',{mode:'range',dateFormat:'Y-m-d',maxDate:todayYMD()
     curRange='custom';
     document.querySelectorAll('#ranges button').forEach(x=>x.classList.remove('active'));
     document.getElementById('pickBtn').classList.add('active');
+    setPeriodLabel('ช่วงที่เลือก'); closePeriodMenu();   // มือถือ
     load();
   }}});
+// ไม่ปิดเมนูตอนเปิดปฏิทิน — flatpickr ต้องใช้ตำแหน่ง pickBtn (ถ้าเมนูปิด pickBtn จะ display:none) · เมนูปิดเองตอนเลือกช่วงเสร็จ (onChange)
 document.getElementById('pickBtn').addEventListener('click',()=>fp.open());
+
+// ── ช่วงเวลาแบบ dropdown (เฉพาะมือถือ) — ปุ่มเดียวโชว์ค่าที่เลือก + เมนูที่เหลือ ──
+const periodEl=document.querySelector('.period');
+function setPeriodLabel(t){ const el=document.getElementById('periodCurrent'); if(el) el.textContent=t; }
+function closePeriodMenu(){ periodEl.classList.remove('open'); }
+document.getElementById('periodTrigger').addEventListener('click',e=>{ e.stopPropagation(); periodEl.classList.toggle('open'); });
+document.addEventListener('click',e=>{ if(periodEl.classList.contains('open') && !periodEl.contains(e.target)) periodEl.classList.remove('open'); });
 
 // สลับ layout เมื่อข้ามจุด 700px (หมุนจอ/ย่อ-ขยาย) → render อันดับใหม่ให้ #2/#3 เข้า-ออกลิสต์
 matchMedia('(max-width:700px)').addEventListener('change',()=>{ if(window.__dashUnlocked){ try{ renderRank(); }catch(e){} } });
