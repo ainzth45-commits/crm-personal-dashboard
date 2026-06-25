@@ -453,7 +453,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   <div class="inc-card pw-card">
     <div class="pw-ico">🔐</div>
     <h3 class="pw-title">ใส่รหัสบันทึกยอดตีกลับ</h3>
-    <p class="pw-sub">รหัส (ตัวเลข) ที่ส่งให้ทาง LINE</p>
+    <p class="pw-sub">รหัส (ตัวเลข) จาก LINE · ใช้ได้ครั้งเดียวต่อการบันทึก</p>
     <input id="pwInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••••">
     <div class="pw-err" id="pwErr"></div>
     <button id="pwResend" type="button" class="pw-resend">📩 ยังไม่ได้รหัส / ขอรหัสใหม่ทาง LINE</button>
@@ -870,7 +870,7 @@ function renderIncentive(){
     return `<div class="inc-emp ${r.count===3?'full':''} ${z?'zero':''}">
       <div class="avawrap"><div class="ava">${avaImg(e)}</div><div class="cnt">${r.count}/3</div></div>
       <div class="nm">${e.name||r.a.id}</div>
-      <div class="cd">${r.a.id} · ยอดรอบก่อน ฿${baht(r.psales)}${r.pret>0?` − ตีกลับ ฿${baht(r.pret)} = ฿${baht(r.net)}`:''}</div>
+      <div class="cd">${r.a.id} · ยอด+อัพรอบก่อน ฿${baht(r.psales)}${r.pret>0?` − ตีกลับ ฿${baht(r.pret)} = ฿${baht(r.net)}`:''}</div>
       <div class="awards">${aw(true,'🎖️','ขั้น 1',r.tier[0])}${aw(r.t2a,'⏱️','Talktime',r.tier[1])}${aw(r.t2b,'📞','สายโทร',r.tier[2])}</div>
       <div class="met">ลา ${r.leave} วัน · ${fmtTime(r.tpd)}/วัน · ${nf(r.cpd)} สาย/วัน</div>
       <div class="inc-total">${z?'ยอดไม่ถึงเกณฑ์ · ฿0':'รวม ฿'+baht(r.amt)}</div>
@@ -892,7 +892,7 @@ async function openIncentive(){
         sb.rpc('dashboard_agg',{p_start:pr.start,p_end:pr.end}),
         loadReturns(prevCycleKey())
       ]);
-      if(!agg.error&&agg.data) agg.data.forEach(d=>PREV_SALES[d.employee_id]=+d.sales||0);
+      if(!agg.error&&agg.data) agg.data.forEach(d=>PREV_SALES[d.employee_id]=(+d.sales||0)+(+d.upsum||0));   // ยอดขาย + อัพเซล
       RETURNS_PREV=ret;
       renderIncentive();   // re-render พร้อมเงิน
     }
@@ -956,11 +956,7 @@ document.getElementById('pwOk').addEventListener('click',()=>{ const v=document.
 document.getElementById('pwCancel').addEventListener('click',()=>pwClose(null));
 document.getElementById('pwInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const v=e.target.value.trim(); if(v) pwClose(v); } });
 document.getElementById('pwModal').addEventListener('click',e=>{ if(e.target.id==='pwModal') pwClose(null); });
-async function rtnGetPw(force){
-  let pw=force?'':(sessionStorage.getItem('rtnPw')||'');
-  if(!pw){ pw=await askPw(); if(pw) sessionStorage.setItem('rtnPw',pw); }
-  return pw;
-}
+async function rtnGetPw(){ return await askPw(); }   // รหัสใช้ครั้งเดียว → ถามใหม่ทุกครั้ง ไม่ cache
 async function saveRtn(){
   const msg=document.getElementById('rtnMsg');
   const items=[];
@@ -978,7 +974,7 @@ async function saveRtn(){
       headers:{'Content-Type':'application/json',apikey:SB_ANON,Authorization:'Bearer '+SB_ANON},
       body:JSON.stringify({action:'save',cycle,items,password:pw})});
     const j=await res.json().catch(()=>({}));
-    if(res.status===403){ sessionStorage.removeItem('rtnPw'); msg.textContent='❌ รหัสไม่ถูกต้อง ลองใหม่'; btn.disabled=false; return; }
+    if(res.status===403||res.status===401){ msg.textContent='❌ รหัสไม่ถูกต้องหรือถูกใช้ไปแล้ว · กดขอรหัสใหม่ทาง LINE'; btn.disabled=false; return; }
     if(!res.ok||!j.ok){ msg.textContent='❌ บันทึกไม่สำเร็จ: '+(j.error||res.status); btn.disabled=false; return; }
     items.forEach(it=>RETURNS_VIEW[it.employee_id]=it.amount);   // อัปเดต local ทันที
     msg.textContent='✅ บันทึก '+j.saved+' รายการแล้ว';
