@@ -97,6 +97,23 @@ main{padding:20px 0 40px}
 .cyclepick.active{display:inline-flex}   /* โชว์เฉพาะตอนอยู่โหมดรอบบิล */
 .cyclepick select{font-family:inherit;font-size:.9rem;font-weight:600;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
 .cyclepick select:focus{outline:none;border-color:var(--violet)}
+/* ── custom dropdown (ครอบ native select ให้เข้าธีมมืด) ── */
+.csel{position:relative;display:inline-block}
+.csel select{display:none}
+.csel-trig{display:inline-flex;align-items:center;gap:9px;font-family:inherit;font-size:.9rem;font-weight:700;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;transition:.15s;justify-content:space-between}
+.csel-trig:hover{background:rgba(255,255,255,.09);border-color:var(--violet)}
+.csel.open .csel-trig{border-color:var(--violet);box-shadow:0 0 0 3px rgba(139,92,246,.2)}
+.csel-trig i{font-size:.66rem;color:var(--muted);transition:transform .22s}
+.csel.open .csel-trig i{transform:rotate(180deg)}
+.csel-menu{position:absolute;top:calc(100% + 7px);left:0;min-width:100%;max-height:288px;overflow:auto;background:rgba(17,21,34,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:14px;padding:6px;z-index:250;box-shadow:0 20px 48px -12px rgba(0,0,0,.72);opacity:0;transform:translateY(-7px) scale(.97);transform-origin:top center;pointer-events:none;transition:opacity .16s,transform .16s}
+.csel.open .csel-menu{opacity:1;transform:none;pointer-events:auto}
+.csel-opt{padding:9px 12px;border-radius:9px;font-size:.92rem;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px;transition:background .12s,color .12s}
+.csel-opt::before{content:'';width:.85rem;flex:0 0 auto;font-size:.8rem;text-align:center}
+.csel-opt:hover{background:rgba(139,92,246,.16);color:var(--ink)}
+.csel-opt.sel{background:rgba(139,92,246,.24);color:#fff}
+.csel-opt.sel::before{content:'✓';color:#a78bfa}
+.csel-menu::-webkit-scrollbar{width:8px}
+.csel-menu::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px}
 
 /* LOADING SPINNER (overlay บนกระดานอันดับ) */
 #boardLoad{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,11,22,.5);backdrop-filter:blur(2px);z-index:20;border-radius:20px}
@@ -710,8 +727,29 @@ document.getElementById('refresh').addEventListener('click',()=>load());
 const cYear=document.getElementById('cycYear'), cMonth=document.getElementById('cycMonth');
 [2025,2026].forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;cYear.appendChild(o);});
 THMON.forEach((nm,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=nm;cMonth.appendChild(o);});
+// custom dropdown ครอบ native select (เก็บ select เป็น source of truth: .value/'change' ทำงานเหมือนเดิม)
+function enhanceSelect(sel){
+  const wrap=document.createElement('div'); wrap.className='csel';
+  sel.parentNode.insertBefore(wrap,sel); wrap.appendChild(sel);
+  const trig=document.createElement('button'); trig.type='button'; trig.className='csel-trig';
+  trig.innerHTML='<span class="csel-val"></span><i class="fa-solid fa-chevron-down"></i>';
+  const menu=document.createElement('div'); menu.className='csel-menu';
+  wrap.appendChild(trig); wrap.appendChild(menu);
+  [...sel.options].forEach(o=>{
+    const it=document.createElement('div'); it.className='csel-opt'; it.textContent=o.textContent; it.dataset.v=o.value;
+    it.addEventListener('click',()=>{ if(sel.value!==o.value){ sel.value=o.value; sel.dispatchEvent(new Event('change',{bubbles:true})); } sync(); close(); });
+    menu.appendChild(it);
+  });
+  function sync(){ const o=sel.options[sel.selectedIndex]; trig.querySelector('.csel-val').textContent=o?o.textContent:''; [...menu.children].forEach(c=>c.classList.toggle('sel',c.dataset.v===sel.value)); }
+  function open(){ wrap.classList.add('open'); const s=menu.querySelector('.sel'); if(s)s.scrollIntoView({block:'center'}); }
+  function close(){ wrap.classList.remove('open'); }
+  trig.addEventListener('click',e=>{ e.stopPropagation(); document.querySelectorAll('.csel.open').forEach(w=>{if(w!==wrap)w.classList.remove('open');}); wrap.classList.contains('open')?close():open(); });
+  document.addEventListener('click',e=>{ if(!wrap.contains(e.target)) close(); });
+  sel._sync=sync; sync();
+}
+enhanceSelect(cYear); enhanceSelect(cMonth);
 /* default = ปี/เดือนปัจจุบันตามปฏิทิน (ไม่เลื่อนตามรอบบิลแม้วันนี้ ≥ 26) */
-(function(){const[ty,tm]=todayYMD().split('-').map(Number);cYear.value=ty;cMonth.value=tm;})();
+(function(){const[ty,tm]=todayYMD().split('-').map(Number);cYear.value=ty;cMonth.value=tm;cYear._sync();cMonth._sync();})();
 let lastCycleKey='';
 function setCycleTabs(on){
   document.getElementById('tabs').classList.toggle('cycle',on);
@@ -743,7 +781,7 @@ function applyCycle(){
 // ปุ่มรอบบิล → เข้าโหมด + default = ปี/เดือนปัจจุบันตามปฏิทิน (ไม่เลื่อนตามรอบบิลแม้วันนี้ ≥ 26) + โชว์ dropdown
 document.getElementById('cycleBtn').addEventListener('click',()=>{
   const[ty,tm]=todayYMD().split('-').map(Number);
-  cYear.value=ty; cMonth.value=tm; lastCycleKey=''; applyCycle();
+  cYear.value=ty; cMonth.value=tm; cYear._sync&&cYear._sync(); cMonth._sync&&cMonth._sync(); lastCycleKey=''; applyCycle();
 });
 cYear.addEventListener('change',applyCycle);
 cMonth.addEventListener('change',applyCycle);
