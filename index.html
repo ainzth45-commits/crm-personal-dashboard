@@ -615,23 +615,53 @@ const byId=id=>document.getElementById(id);
 function animateVal(from,to,dur,cb){if(from===to||dur<=0){cb(to);return;}const t0=performance.now();(function s(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3);cb(from+(to-from)*e);if(p<1)requestAnimationFrame(s);})(performance.now());}
 function setNum(el,to,fmt,instant){if(!el)return;const from=instant?to:(el._c==null?to:el._c);el._c=to;animateVal(from,to,instant?0:650,v=>el.textContent=fmt(v));}
 
-let _kpiInit=false,_firstKpi=true,_podInit=false,rowMap={},lastMetric=null;
+let _kpiInit=false,_firstKpi=true,_podInit=false,rowMap={},lastMetric=null,kpiMetric=null;
+// 2 การ์ด KPI เปลี่ยนค่า/หัวข้อ/สี ตามหมวดที่ดู (การ์ด1=รวมทั้งทีม · การ์ด2=เฉลี่ย)
+function kpiSpec(m,T,closers,retCount){
+  const div=(a,b)=>b?a/b:0;
+  const S={
+    sales:   {c:'var(--green)', i1:'fa-sack-dollar', l1:'ยอดขายรวม',            v1:T.sales, f1:baht,   u1:'฿',     s1:`${nf(T.bills)} บิล · ปิดได้ ${nf(closers)} คน`,
+                                  i2:'fa-receipt',     l2:'AOV เฉลี่ยทั้งทีม',     v2:div(T.sales,T.paid), f2:baht, u2:'฿/บิล', s2:'ยอดขาย ÷ บิลที่มียอด (ไม่นับบิล 0)'},
+    aov:     {c:'var(--violet)', i1:'fa-sack-dollar', l1:'ยอดขายรวม',            v1:T.sales, f1:baht,   u1:'฿',     s1:`${nf(T.bills)} บิล · ปิดได้ ${nf(closers)} คน`,
+                                  i2:'fa-receipt',     l2:'AOV เฉลี่ยทั้งทีม',     v2:div(T.sales,T.paid), f2:baht, u2:'฿/บิล', s2:'ยอดขาย ÷ บิลที่มียอด (ไม่นับบิล 0)'},
+    talk:    {c:'var(--teal)',   i1:'fa-clock',        l1:'Talktime รวมทั้งทีม',   v1:T.talk,  f1:fmtTime, u1:'',     s1:'รวมทุกสายของทั้งทีม',
+                                  i2:'fa-headset',     l2:'เฉลี่ย/สายคุย',         v2:div(T.talk,T.qual), f2:fmtTime, u2:'/สาย', s2:`${nf(T.qual)} สายคุย`},
+    avgtalk: {c:'var(--amber)',  i1:'fa-clock',        l1:'Talktime รวมทั้งทีม',   v1:T.talk,  f1:fmtTime, u1:'',     s1:`${nf(T.qual)} สายคุย`,
+                                  i2:'fa-headset',     l2:'เฉลี่ย/สายคุยทั้งทีม',  v2:div(T.talk,T.qual), f2:fmtTime, u2:'/สาย', s2:'Talktime ÷ สายคุย'},
+    answer:  {c:'var(--blue)',   i1:'fa-phone-volume', l1:'สายโทรทั้งหมด',         v1:T.calls, f1:nf,     u1:'สาย',   s1:`รับ ${nf(T.answered)} สาย`,
+                                  i2:'fa-percent',     l2:'% รับสายเฉลี่ยทั้งทีม', v2:div(T.answered,T.calls)*100, f2:v=>v.toFixed(0), u2:'%', s2:'สายที่รับ ÷ สายโทรทั้งหมด'},
+    upsell:  {c:'#ff7eb3',       i1:'fa-cart-shopping',l1:'ยอดอัพเซลรวม',          v1:T.upsum, f1:baht,   u1:'฿',     s1:`${nf(T.upcnt)} ครั้ง`,
+                                  i2:'fa-tags',        l2:'เฉลี่ย/ครั้ง',          v2:div(T.upsum,T.upcnt), f2:baht, u2:'฿/ครั้ง', s2:'ยอดอัพเซล ÷ จำนวนครั้ง'},
+    talkday: {c:'var(--teal)',   i1:'fa-clock',        l1:'Talktime รวม (วันทำงาน)',v1:T.workTalk, f1:fmtTime, u1:'', s1:`${nf(T.workDays)} วันทำงานรวม`,
+                                  i2:'fa-headset',     l2:'Talktime/วัน เฉลี่ยทั้งทีม', v2:div(T.workTalk,T.workDays), f2:fmtTime, u2:'/วัน', s2:'Talktime ÷ วันทำงาน'},
+    callday: {c:'var(--blue)',   i1:'fa-phone-volume', l1:'สายโทรรวม (วันทำงาน)',  v1:T.workCalls, f1:nf, u1:'สาย',  s1:`${nf(T.workDays)} วันทำงานรวม`,
+                                  i2:'fa-phone',       l2:'สาย/วัน เฉลี่ยทั้งทีม', v2:div(T.workCalls,T.workDays), f2:nf, u2:'/วัน', s2:'สายโทร ÷ วันทำงาน'},
+    returns: {c:'#f87171',       i1:'fa-rotate-left',  l1:'ยอดตีกลับรวม',          v1:T.returns, f1:baht, u1:'฿',    s1:`${nf(retCount)} คนมีตีกลับ`,
+                                  i2:'fa-user-minus',  l2:'เฉลี่ย/คน (มีตีกลับ)',  v2:div(T.returns,retCount), f2:baht, u2:'฿/คน', s2:'ยอดตีกลับ ÷ คนที่มีตีกลับ'},
+  };
+  return S[m]||S.sales;
+}
 function renderKpis(){
   const A=AGG.filter(teamMatch);
-  const T=A.reduce((o,a)=>({bills:o.bills+a.bills,paid:o.paid+a.paidBills,sales:o.sales+a.sales,closers:o.closers}),{bills:0,paid:0,sales:0,closers:0});
+  const T=A.reduce((o,a)=>({bills:o.bills+a.bills,paid:o.paid+a.paidBills,sales:o.sales+a.sales,
+    talk:o.talk+a.talk,qual:o.qual+a.qual,calls:o.calls+a.calls,answered:o.answered+a.answered,
+    upsum:o.upsum+a.upsum,upcnt:o.upcnt+a.upcnt,workTalk:o.workTalk+a.workTalk,workCalls:o.workCalls+a.workCalls,workDays:o.workDays+a.workDays}),
+    {bills:0,paid:0,sales:0,talk:0,qual:0,calls:0,answered:0,upsum:0,upcnt:0,workTalk:0,workCalls:0,workDays:0});
   const closers=A.filter(a=>a.paidBills>0).length;
-  const aov=T.paid?T.sales/T.paid:0;
-  if(!_kpiInit){
+  const retVals=A.map(a=>RETURNS_VIEW[a.id]||0); T.returns=retVals.reduce((s,v)=>s+v,0); const retCount=retVals.filter(v=>v>0).length;
+  const sp=kpiSpec(curMetric,T,closers,retCount);
+  const metricChanged=kpiMetric!==curMetric;
+  if(!_kpiInit||metricChanged){
     document.getElementById('kpis').innerHTML=`
-      <div class="kpi" style="--c:var(--green)"><div class="top"><div class="ic"><i class="fa-solid fa-sack-dollar"></i></div><div class="lbl">ยอดขายรวม</div></div><div class="v"><span id="kSales">0</span> <small>฿</small></div><div class="sub"><span id="kBills">0</span> บิล · ปิดได้ <span id="kClose">0</span> คน</div></div>
-      <div class="kpi" style="--c:var(--violet)"><div class="top"><div class="ic"><i class="fa-solid fa-receipt"></i></div><div class="lbl">AOV เฉลี่ยทั้งทีม</div></div><div class="v"><span id="kAov">0</span> <small>฿/บิล</small></div><div class="sub">ยอดขาย ÷ บิลที่มียอด (ไม่นับบิล 0)</div></div>`;
-    _kpiInit=true;
+      <div class="kpi" style="--c:${sp.c}"><div class="top"><div class="ic"><i class="fa-solid ${sp.i1}"></i></div><div class="lbl" id="kL1"></div></div><div class="v"><span id="kV1">0</span> <small id="kU1"></small></div><div class="sub" id="kS1"></div></div>
+      <div class="kpi" style="--c:var(--violet)"><div class="top"><div class="ic"><i class="fa-solid ${sp.i2}"></i></div><div class="lbl" id="kL2"></div></div><div class="v"><span id="kV2">0</span> <small id="kU2"></small></div><div class="sub" id="kS2"></div></div>`;
+    _kpiInit=true; kpiMetric=curMetric;
   }
-  const ins=_firstKpi;_firstKpi=false;
-  setNum(byId('kSales'),T.sales,baht,ins);
-  setNum(byId('kBills'),T.bills,v=>nf(v),ins);
-  setNum(byId('kClose'),closers,v=>nf(v),ins);
-  setNum(byId('kAov'),aov,baht,ins);
+  const ins=_firstKpi||metricChanged; _firstKpi=false;
+  byId('kL1').textContent=sp.l1; byId('kU1').textContent=sp.u1; byId('kS1').innerHTML=sp.s1;
+  byId('kL2').textContent=sp.l2; byId('kU2').textContent=sp.u2; byId('kS2').innerHTML=sp.s2;
+  setNum(byId('kV1'),sp.v1,sp.f1,ins);
+  setNum(byId('kV2'),sp.v2,sp.f2,ins);
 }
 
 function buildPodium(){
@@ -754,7 +784,7 @@ document.querySelectorAll('#ranges button[data-r]').forEach(b=>b.addEventListene
 }));
 document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');curMetric=b.dataset.m;renderRank();
+  b.classList.add('active');curMetric=b.dataset.m;renderKpis();renderRank();
 }));
 document.getElementById('refresh').addEventListener('click',()=>load());
 
