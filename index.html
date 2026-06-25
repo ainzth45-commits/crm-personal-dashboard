@@ -105,7 +105,7 @@ main{padding:20px 0 40px}
 .csel.open .csel-trig{border-color:var(--violet);box-shadow:0 0 0 3px rgba(139,92,246,.2)}
 .csel-trig i{font-size:.66rem;color:var(--muted);transition:transform .22s}
 .csel.open .csel-trig i{transform:rotate(180deg)}
-.csel-menu{position:absolute;top:calc(100% + 7px);left:0;min-width:100%;max-height:288px;overflow:auto;background:rgba(17,21,34,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:14px;padding:6px;z-index:250;box-shadow:0 20px 48px -12px rgba(0,0,0,.72);opacity:0;transform:translateY(-7px) scale(.97);transform-origin:top center;pointer-events:none;transition:opacity .16s,transform .16s}
+.csel-menu{position:fixed;min-width:120px;max-height:288px;overflow:auto;background:rgba(17,21,34,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:14px;padding:6px;z-index:250;box-shadow:0 20px 48px -12px rgba(0,0,0,.72);opacity:0;transform:translateY(-7px) scale(.97);transform-origin:top center;pointer-events:none;transition:opacity .16s,transform .16s}
 .csel.open .csel-menu{opacity:1;transform:none;pointer-events:auto}
 .csel-opt{padding:9px 12px;border-radius:9px;font-size:.92rem;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px;transition:background .12s,color .12s}
 .csel-opt::before{content:'';width:.85rem;flex:0 0 auto;font-size:.8rem;text-align:center}
@@ -741,7 +741,7 @@ function enhanceSelect(sel){
     menu.appendChild(it);
   });
   function sync(){ const o=sel.options[sel.selectedIndex]; trig.querySelector('.csel-val').textContent=o?o.textContent:''; [...menu.children].forEach(c=>c.classList.toggle('sel',c.dataset.v===sel.value)); }
-  function open(){ wrap.classList.add('open'); const s=menu.querySelector('.sel'); if(s)s.scrollIntoView({block:'center'}); }
+  function open(){ const r=trig.getBoundingClientRect(); menu.style.left=r.left+'px'; menu.style.top=(r.bottom+7)+'px'; menu.style.minWidth=r.width+'px'; wrap.classList.add('open'); const s=menu.querySelector('.sel'); if(s)s.scrollIntoView({block:'center'}); }
   function close(){ wrap.classList.remove('open'); }
   trig.addEventListener('click',e=>{ e.stopPropagation(); document.querySelectorAll('.csel.open').forEach(w=>{if(w!==wrap)w.classList.remove('open');}); wrap.classList.contains('open')?close():open(); });
   document.addEventListener('click',e=>{ if(!wrap.contains(e.target)) close(); });
