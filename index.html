@@ -121,7 +121,8 @@ main{padding:20px 0 40px}
 .inc-note{padding:0 22px 13px;font-size:.8rem;color:var(--amber);font-style:italic;border-bottom:1px solid var(--line)}
 .inc-summary{padding:12px 22px;font-size:.9rem;color:var(--ink2);border-bottom:1px solid var(--line)}
 .inc-summary b{color:var(--gold);font-family:var(--mono)}
-.inc-results{overflow-y:auto;padding:14px}
+.inc-results{overflow-y:auto;padding:14px;overscroll-behavior:contain}   /* กัน scroll ทะลุไป dashboard ข้างหลัง */
+body.modal-open{overflow:hidden}   /* popup incentive เปิดอยู่ → ล็อกไม่ให้พื้นหลังเลื่อน */
 .inc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
 .inc-emp{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px}
 .inc-emp.full{border-color:rgba(252,211,77,.55);background:rgba(252,211,77,.08);box-shadow:0 8px 24px -8px rgba(252,211,77,.45)}
@@ -667,7 +668,7 @@ function exitCycle(){
   document.getElementById('cyclePick').classList.remove('active');
   document.getElementById('cycleBtn').classList.remove('active');
   document.getElementById('incentiveBtn').style.display='none';
-  document.getElementById('incModal').classList.remove('on');
+  closeInc();
   lastCycleKey=''; setCycleTabs(false);
 }
 function applyCycle(){
@@ -724,15 +725,17 @@ function renderIncentive(){
     </div>`;
   }).join('')+'</div>';
 }
+function closeInc(){ document.getElementById('incModal').classList.remove('on'); document.body.classList.remove('modal-open'); }
 function openIncentive(){
   document.getElementById('incCycle').textContent=document.getElementById('rangeLabel').textContent;
   ['incLeave','incTalk','incCalls'].forEach(id=>document.getElementById(id).value='');   // ว่างเสมอเมื่อเปิดใหม่
   document.getElementById('incModal').classList.add('on');
+  document.body.classList.add('modal-open');   // ล็อกพื้นหลังไม่ให้เลื่อน
   renderIncentive();
 }
 document.getElementById('incentiveBtn').addEventListener('click',openIncentive);
-document.getElementById('incClose').addEventListener('click',()=>document.getElementById('incModal').classList.remove('on'));
-document.getElementById('incModal').addEventListener('click',e=>{ if(e.target.id==='incModal') document.getElementById('incModal').classList.remove('on'); });
+document.getElementById('incClose').addEventListener('click',closeInc);
+document.getElementById('incModal').addEventListener('click',e=>{ if(e.target.id==='incModal') closeInc(); });
 ['incLeave','incTalk','incCalls'].forEach(id=>document.getElementById(id).addEventListener('input',renderIncentive));
 
 const fp=flatpickr('#picker',{mode:'range',dateFormat:'Y-m-d',maxDate:todayYMD(),positionElement:document.getElementById('pickBtn'),
