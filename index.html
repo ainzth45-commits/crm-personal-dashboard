@@ -106,7 +106,7 @@ main{padding:20px 0 40px}
 .csel-trig i{font-size:.66rem;color:var(--muted);transition:transform .22s}
 .csel.open .csel-trig i{transform:rotate(180deg)}
 .csel-menu{position:fixed;min-width:120px;max-height:288px;overflow:auto;background:rgba(17,21,34,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:14px;padding:6px;z-index:250;box-shadow:0 20px 48px -12px rgba(0,0,0,.72);opacity:0;transform:translateY(-7px) scale(.97);transform-origin:top center;pointer-events:none;transition:opacity .16s,transform .16s}
-.csel.open .csel-menu{opacity:1;transform:none;pointer-events:auto}
+.csel-menu.open{opacity:1;transform:none;pointer-events:auto}
 .csel-opt{padding:9px 12px;border-radius:9px;font-size:.92rem;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px;transition:background .12s,color .12s}
 .csel-opt::before{content:'';width:.85rem;flex:0 0 auto;font-size:.8rem;text-align:center}
 .csel-opt:hover{background:rgba(139,92,246,.16);color:var(--ink)}
@@ -185,6 +185,20 @@ body.modal-open{overflow:hidden}   /* popup incentive เปิดอยู่ �
 .rtn-save{font-family:inherit;font-weight:800;font-size:.95rem;padding:10px 20px;border-radius:12px;border:none;background:#f87171;color:#1a0606;cursor:pointer}
 .rtn-save:hover{filter:brightness(1.08)}
 .rtn-save:disabled{opacity:.5;cursor:default}
+/* modal ใส่รหัสบันทึกยอดตีกลับ */
+.pw-card{max-width:360px;width:calc(100% - 40px);align-items:center;text-align:center;gap:6px}
+.pw-ico{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;font-size:1.9rem;background:linear-gradient(135deg,rgba(139,92,246,.3),rgba(96,165,250,.25));border:1px solid rgba(139,92,246,.4);margin-bottom:6px}
+.pw-title{margin:0;font-size:1.18rem;font-weight:800;color:var(--ink)}
+.pw-sub{margin:0 0 6px;font-size:.85rem;color:var(--muted)}
+#pwInput{width:100%;text-align:center;font-family:var(--mono);font-size:1.5rem;letter-spacing:.26em;padding:13px;border-radius:13px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--ink)}
+#pwInput:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px rgba(139,92,246,.2)}
+.pw-err{color:#f87171;font-size:.82rem;min-height:1.1em;font-weight:600}
+.pw-btns{display:flex;gap:10px;width:100%;margin-top:4px}
+.pw-btn{flex:1;padding:12px;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;transition:.15s}
+.pw-btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink2)}
+.pw-btn.ghost:hover{background:rgba(255,255,255,.06)}
+.pw-btn.go{background:var(--violet);border:none;color:#fff}
+.pw-btn.go:hover{filter:brightness(1.1)}
 
 /* TABS */
 .tabs{display:flex;gap:9px;margin-bottom:18px;flex-wrap:wrap}
@@ -428,6 +442,18 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
     </div>
     <div class="rtn-list" id="rtnList"></div>
     <div class="rtn-foot"><span class="rtn-msg" id="rtnMsg"></span><button id="rtnSave" class="rtn-save">💾 บันทึก</button></div>
+  </div>
+</div>
+
+<!-- ===== ใส่รหัสบันทึกยอดตีกลับ ===== -->
+<div id="pwModal" class="inc-modal">
+  <div class="inc-card pw-card">
+    <div class="pw-ico">🔐</div>
+    <h3 class="pw-title">ใส่รหัสบันทึกยอดตีกลับ</h3>
+    <p class="pw-sub">รหัส (ตัวเลข) ที่ส่งให้ทาง LINE</p>
+    <input id="pwInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••••">
+    <div class="pw-err" id="pwErr"></div>
+    <div class="pw-btns"><button id="pwCancel" class="pw-btn ghost">ยกเลิก</button><button id="pwOk" class="pw-btn go">ยืนยัน</button></div>
   </div>
 </div>
 
@@ -733,18 +759,20 @@ function enhanceSelect(sel){
   sel.parentNode.insertBefore(wrap,sel); wrap.appendChild(sel);
   const trig=document.createElement('button'); trig.type='button'; trig.className='csel-trig';
   trig.innerHTML='<span class="csel-val"></span><i class="fa-solid fa-chevron-down"></i>';
+  wrap.appendChild(trig);
   const menu=document.createElement('div'); menu.className='csel-menu';
-  wrap.appendChild(trig); wrap.appendChild(menu);
+  document.body.appendChild(menu);   // นอก header กัน overflow/backdrop-filter clip
   [...sel.options].forEach(o=>{
     const it=document.createElement('div'); it.className='csel-opt'; it.textContent=o.textContent; it.dataset.v=o.value;
     it.addEventListener('click',()=>{ if(sel.value!==o.value){ sel.value=o.value; sel.dispatchEvent(new Event('change',{bubbles:true})); } sync(); close(); });
     menu.appendChild(it);
   });
   function sync(){ const o=sel.options[sel.selectedIndex]; trig.querySelector('.csel-val').textContent=o?o.textContent:''; [...menu.children].forEach(c=>c.classList.toggle('sel',c.dataset.v===sel.value)); }
-  function open(){ const r=trig.getBoundingClientRect(); menu.style.left=r.left+'px'; menu.style.top=(r.bottom+7)+'px'; menu.style.minWidth=r.width+'px'; wrap.classList.add('open'); const s=menu.querySelector('.sel'); if(s)s.scrollIntoView({block:'center'}); }
-  function close(){ wrap.classList.remove('open'); }
-  trig.addEventListener('click',e=>{ e.stopPropagation(); document.querySelectorAll('.csel.open').forEach(w=>{if(w!==wrap)w.classList.remove('open');}); wrap.classList.contains('open')?close():open(); });
-  document.addEventListener('click',e=>{ if(!wrap.contains(e.target)) close(); });
+  function open(){ const r=trig.getBoundingClientRect(); menu.style.left=r.left+'px'; menu.style.top=(r.bottom+7)+'px'; menu.style.minWidth=r.width+'px'; wrap.classList.add('open'); menu.classList.add('open'); const s=menu.querySelector('.sel'); if(s)s.scrollIntoView({block:'center'}); }
+  function close(){ wrap.classList.remove('open'); menu.classList.remove('open'); }
+  function closeAll(){ document.querySelectorAll('.csel.open,.csel-menu.open').forEach(x=>x.classList.remove('open')); }
+  trig.addEventListener('click',e=>{ e.stopPropagation(); const wasOpen=wrap.classList.contains('open'); closeAll(); if(!wasOpen) open(); });
+  document.addEventListener('click',e=>{ if(!wrap.contains(e.target)&&!menu.contains(e.target)) close(); });
   sel._sync=sync; sync();
 }
 enhanceSelect(cYear); enhanceSelect(cMonth);
@@ -898,9 +926,23 @@ function renderRtnList(q){
     const v=inp.value.trim(); inp.closest('.rtn-row').classList.toggle('has', v!=='' && +v>0);
   }));
 }
-function rtnGetPw(){
-  let pw=sessionStorage.getItem('rtnPw')||'';
-  if(!pw){ pw=(window.prompt('ใส่รหัสบันทึกยอดตีกลับ (ส่งให้ทาง LINE)')||'').trim(); if(pw) sessionStorage.setItem('rtnPw',pw); }
+let _pwResolve=null;
+function askPw(){   // themed modal แทน window.prompt → คืน Promise(รหัส | null)
+  return new Promise(res=>{
+    _pwResolve=res;
+    document.getElementById('pwInput').value=''; document.getElementById('pwErr').textContent='';
+    document.getElementById('pwModal').classList.add('on'); document.body.classList.add('modal-open');
+    setTimeout(()=>document.getElementById('pwInput').focus(),60);
+  });
+}
+function pwClose(val){ document.getElementById('pwModal').classList.remove('on'); document.body.classList.remove('modal-open'); const r=_pwResolve; _pwResolve=null; if(r)r(val); }
+document.getElementById('pwOk').addEventListener('click',()=>{ const v=document.getElementById('pwInput').value.trim(); if(!v){document.getElementById('pwErr').textContent='กรุณาใส่รหัส';return;} pwClose(v); });
+document.getElementById('pwCancel').addEventListener('click',()=>pwClose(null));
+document.getElementById('pwInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const v=e.target.value.trim(); if(v) pwClose(v); } });
+document.getElementById('pwModal').addEventListener('click',e=>{ if(e.target.id==='pwModal') pwClose(null); });
+async function rtnGetPw(force){
+  let pw=force?'':(sessionStorage.getItem('rtnPw')||'');
+  if(!pw){ pw=await askPw(); if(pw) sessionStorage.setItem('rtnPw',pw); }
   return pw;
 }
 async function saveRtn(){
@@ -912,7 +954,7 @@ async function saveRtn(){
     items.push({employee_id:inp.dataset.id,amount:n});
   }
   if(!items.length){ msg.textContent='ยังไม่ได้กรอกยอดใคร'; return; }
-  const pw=rtnGetPw(); if(!pw){ msg.textContent='ต้องใส่รหัสก่อน'; return; }
+  const pw=await rtnGetPw(); if(!pw){ msg.textContent='ต้องใส่รหัสก่อน'; return; }
   const btn=document.getElementById('rtnSave'); btn.disabled=true; msg.textContent='⏳ กำลังบันทึก...';
   const cycle=cycleKey(+cYear.value,+cMonth.value);
   try{
