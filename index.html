@@ -457,6 +457,7 @@ function expectedWorkDays(r){
 function perfect(a){ return curRange==='cycle' && EXPECT_WD>0 && a.workDays>=EXPECT_WD; }
 
 const baht=n=>Math.round(n).toLocaleString('en-US');
+const nf=baht;   // ตัวเลขทั่วไป (มี , คั่นหลัก #,##0) — ใช้กับทุกตัวเลขที่ไม่ใช่ talktime
 const hms=s=>{s=Math.round(s||0);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h?`${h}:${pad(m)}:${pad(x)}`:`${m}:${pad(x)}`;};
 const msmm=s=>{s=Math.round(s||0);return Math.floor(s/60)+':'+pad(s%60);}; // นาที:วิ
 let timeFmt='mss';                                    // 'mss'=m:ss (default) | 'hms'=h:mm:ss
@@ -466,14 +467,14 @@ const avaImg=(e)=>e.photo?`<img src="${e.photo}" referrerpolicy="no-referrer" on
 
 let curRange='today',curMetric='sales',AGG=[],pollTimer=null,rtTimer=null,channel=null;
 const METRICS={
-  sales:{unit:'฿',color:'var(--green)',val:a=>a.sales,fmt:v=>baht(v),sub:a=>`${a.bills} บิล · AOV ${a.paidBills?baht(a.sales/a.paidBills):'-'}`,keep:a=>a.calls>0||a.bills>0},
-  talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>fmtTime(v),sub:a=>`เฉลี่ย ${fmtTime(a.workTalk/(a.workDays||1))}/วัน · ${Math.round(a.workCalls/(a.workDays||1))} สาย/วัน · ${a.workDays} วันทำงาน`,keep:a=>a.calls>0},
-  avgtalk:{unit:'/สายคุย',color:'var(--amber)',val:a=>a.qual?a.talk/a.qual:0,fmt:v=>fmtTime(v),sub:a=>`${a.qual} สายคุย · รวม ${fmtTime(a.talk)}`,keep:a=>a.qual>0},
-  answer:{unit:'%',color:'var(--blue)',val:a=>a.calls?a.answered/a.calls*100:0,fmt:v=>v.toFixed(0)+'%',sub:a=>`รับ ${a.answered}/${a.calls} สาย`,keep:a=>a.calls>0},
-  aov:{unit:'฿/บิล',color:'var(--violet)',val:a=>a.paidBills?a.sales/a.paidBills:0,fmt:v=>baht(v),sub:a=>`${a.paidBills} บิลมียอด · ${baht(a.sales)}฿`,keep:a=>a.paidBills>0},
-  upsell:{unit:'฿',color:'#ff7eb3',val:a=>a.upsum,fmt:v=>baht(v),sub:a=>`${a.upcnt} ครั้ง · เฉลี่ย ${a.upcnt?baht(a.upsum/a.upcnt):'-'}`,keep:a=>a.upsum>0},
-  talkday:{unit:'/วัน',color:'var(--teal)',val:a=>a.workTalk/(a.workDays||1),fmt:v=>fmtTime(v),sub:a=>`${a.workDays} วันทำงาน · รวม ${fmtTime(a.workTalk)}`,keep:a=>a.workCalls>0},
-  callday:{unit:'สาย/วัน',color:'var(--blue)',val:a=>a.workCalls/(a.workDays||1),fmt:v=>Math.round(v),sub:a=>`${a.workDays} วันทำงาน · รวม ${a.workCalls} สาย`,keep:a=>a.workCalls>0},
+  sales:{unit:'฿',color:'var(--green)',val:a=>a.sales,fmt:v=>baht(v),sub:a=>`${nf(a.bills)} บิล · AOV ${a.paidBills?baht(a.sales/a.paidBills):'-'}`,keep:a=>a.calls>0||a.bills>0},
+  talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>fmtTime(v),sub:a=>`เฉลี่ย ${fmtTime(a.workTalk/(a.workDays||1))}/วัน · ${nf(a.workCalls/(a.workDays||1))} สาย/วัน · ${nf(a.workDays)} วันทำงาน`,keep:a=>a.calls>0},
+  avgtalk:{unit:'/สายคุย',color:'var(--amber)',val:a=>a.qual?a.talk/a.qual:0,fmt:v=>fmtTime(v),sub:a=>`${nf(a.qual)} สายคุย · รวม ${fmtTime(a.talk)}`,keep:a=>a.qual>0},
+  answer:{unit:'%',color:'var(--blue)',val:a=>a.calls?a.answered/a.calls*100:0,fmt:v=>v.toFixed(0)+'%',sub:a=>`รับ ${nf(a.answered)}/${nf(a.calls)} สาย`,keep:a=>a.calls>0},
+  aov:{unit:'฿/บิล',color:'var(--violet)',val:a=>a.paidBills?a.sales/a.paidBills:0,fmt:v=>baht(v),sub:a=>`${nf(a.paidBills)} บิลมียอด · ${baht(a.sales)}฿`,keep:a=>a.paidBills>0},
+  upsell:{unit:'฿',color:'#ff7eb3',val:a=>a.upsum,fmt:v=>baht(v),sub:a=>`${nf(a.upcnt)} ครั้ง · เฉลี่ย ${a.upcnt?baht(a.upsum/a.upcnt):'-'}`,keep:a=>a.upsum>0},
+  talkday:{unit:'/วัน',color:'var(--teal)',val:a=>a.workTalk/(a.workDays||1),fmt:v=>fmtTime(v),sub:a=>`${nf(a.workDays)} วันทำงาน · รวม ${fmtTime(a.workTalk)}`,keep:a=>a.workCalls>0},
+  callday:{unit:'สาย/วัน',color:'var(--blue)',val:a=>a.workCalls/(a.workDays||1),fmt:v=>nf(v),sub:a=>`${nf(a.workDays)} วันทำงาน · รวม ${nf(a.workCalls)} สาย`,keep:a=>a.workCalls>0},
 };
 
 let _loadSeq=0;
@@ -522,8 +523,8 @@ function renderKpis(){
   }
   const ins=_firstKpi;_firstKpi=false;
   setNum(byId('kSales'),T.sales,baht,ins);
-  setNum(byId('kBills'),T.bills,v=>Math.round(v),ins);
-  setNum(byId('kClose'),closers,v=>Math.round(v),ins);
+  setNum(byId('kBills'),T.bills,v=>nf(v),ins);
+  setNum(byId('kClose'),closers,v=>nf(v),ins);
   setNum(byId('kAov'),aov,baht,ins);
 }
 
@@ -565,7 +566,7 @@ function renderPodium(top,M,instant){
     setNum(slot.querySelector('.nv'),o.v,v=>M.fmt(v),instant||changed);
     if(i===0){const a=o.a; // [#1] โปรไฟล์แชมป์ครบทุกมุม
       slot.querySelector('.s1').textContent=baht(a.sales)+'฿';
-      slot.querySelector('.s2').textContent=a.bills;
+      slot.querySelector('.s2').textContent=nf(a.bills);
       slot.querySelector('.s3').textContent=a.paidBills?baht(a.sales/a.paidBills):'-';
       slot.querySelector('.s4').textContent=fmtTime(a.talk);
       slot.querySelector('.s5').textContent=a.calls?Math.round(a.answered/a.calls*100)+'%':'-';
@@ -652,7 +653,8 @@ document.getElementById('refresh').addEventListener('click',()=>load());
 const cYear=document.getElementById('cycYear'), cMonth=document.getElementById('cycMonth');
 [2025,2026].forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;cYear.appendChild(o);});
 THMON.forEach((nm,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=nm;cMonth.appendChild(o);});
-(function(){const[ty,tm,td]=todayYMD().split('-').map(Number);let by=ty,bm=tm;if(td>=26){bm=tm+1;if(bm>12){bm=1;by++;}}cYear.value=by;cMonth.value=bm;})();
+/* default = ปี/เดือนปัจจุบันตามปฏิทิน (ไม่เลื่อนตามรอบบิลแม้วันนี้ ≥ 26) */
+(function(){const[ty,tm]=todayYMD().split('-').map(Number);cYear.value=ty;cMonth.value=tm;})();
 let lastCycleKey='';
 function setCycleTabs(on){
   document.getElementById('tabs').classList.toggle('cycle',on);
@@ -681,10 +683,10 @@ function applyCycle(){
   setPeriodLabel('รอบ '+THMON[m-1]+' '+y); closePeriodMenu();
   load();
 }
-// ปุ่มรอบบิล → เข้าโหมด + default รอบบิลล่าสุด + โชว์ dropdown
+// ปุ่มรอบบิล → เข้าโหมด + default = ปี/เดือนปัจจุบันตามปฏิทิน (ไม่เลื่อนตามรอบบิลแม้วันนี้ ≥ 26) + โชว์ dropdown
 document.getElementById('cycleBtn').addEventListener('click',()=>{
-  const[ty,tm,td]=todayYMD().split('-').map(Number);let by=ty,bm=tm;if(td>=26){bm=tm+1;if(bm>12){bm=1;by++;}}
-  cYear.value=by; cMonth.value=bm; lastCycleKey=''; applyCycle();
+  const[ty,tm]=todayYMD().split('-').map(Number);
+  cYear.value=ty; cMonth.value=tm; lastCycleKey=''; applyCycle();
 });
 cYear.addEventListener('change',applyCycle);
 cMonth.addEventListener('change',applyCycle);
@@ -718,7 +720,7 @@ function renderIncentive(){
       <div class="nm">${e.name||r.a.id}</div>
       <div class="cd">${r.a.id}</div>
       <div class="awards">${aw(true,'🎖️','ขั้น 1')}${aw(r.t2a,'⏱️','Talktime')}${aw(r.t2b,'📞','สายโทร')}</div>
-      <div class="met">ลา ${r.leave} วัน · ${fmtTime(r.tpd)}/วัน · ${Math.round(r.cpd)} สาย/วัน</div>
+      <div class="met">ลา ${r.leave} วัน · ${fmtTime(r.tpd)}/วัน · ${nf(r.cpd)} สาย/วัน</div>
     </div>`;
   }).join('')+'</div>';
 }
