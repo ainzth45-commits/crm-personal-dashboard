@@ -704,7 +704,7 @@ function renderIncentive(){
   const minTalk=(+document.getElementById('incTalk').value||0)*60;   // นาที→วินาที
   const minCalls=+document.getElementById('incCalls').value||0;
   const rows=AGG.filter(teamMatch).map(a=>{
-    const leave=Math.max(0, EXPECT_WD - a.workDays);
+    const leave=Math.max(0, EXPECT_WD - a.days);   // วันลา: a.days = วันมาจริงรวมอาทิตย์/วันหยุด (มาทำวันหยุด=สลับหยุดวันธรรมดาได้ ไม่ถือว่าลา · มาเกิน EXPECT_WD → ลา 0)
     const tpd=a.workDays?a.workTalk/a.workDays:0, cpd=a.workDays?a.workCalls/a.workDays:0;
     const t1=leave<=maxLeave, t2a=t1&&tpd>=minTalk, t2b=t1&&cpd>=minCalls;
     return {a,leave,tpd,cpd,t1,t2a,t2b,count:(t1?1:0)+(t2a?1:0)+(t2b?1:0)};
