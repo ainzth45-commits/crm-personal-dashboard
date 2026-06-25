@@ -723,7 +723,9 @@ function renderRank(){
   // มือถือ (≤700px): โพเดียมเหลือ #1 อย่างเดียว แล้ว #2→ท้าย เป็นลิสต์ยาว · เดสก์ท็อป: โพเดียม #1-3 + ลิสต์ #4+
   const podCount=matchMedia('(max-width:700px)').matches?1:3;
   renderPodium(list.slice(0,podCount),M,instant);
-  renderList(list.slice(podCount),max,M,instant,podCount+1);
+  // bar ของลิสต์เทียบกับคนอันดับสุดท้ายบนโพเดียม (เดสก์ท็อป=#3 · มือถือ=#1) → #4/#2 เกือบเต็มแท่ง
+  const barRef=(list[podCount-1]&&list[podCount-1].v)||max;
+  renderList(list.slice(podCount),barRef,M,instant,podCount+1);
 }
 
 function setupLive(isLive){
