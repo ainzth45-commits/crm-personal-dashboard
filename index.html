@@ -126,15 +126,28 @@ main{padding:20px 0 40px}
 #incentiveBtn:hover{background:rgba(252,211,77,.22)}
 .inc-modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(4,6,12,.72);backdrop-filter:blur(4px);padding:18px}
 .inc-modal.on{display:flex}
-.inc-card{width:min(96vw,840px);max-height:90vh;display:flex;flex-direction:column;background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
+.inc-card{position:relative;width:min(96vw,840px);max-height:90vh;display:flex;flex-direction:column;background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
 .inc-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
 .inc-head h3{font-size:1.15rem;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .inc-head h3 span{font-size:.82rem;color:var(--muted);font-weight:500}
 .inc-head button{background:none;border:none;color:var(--ink2);font-size:1.4rem;cursor:pointer;line-height:1;padding:0 4px}
 .inc-cond{display:flex;flex-wrap:wrap;gap:10px 18px;padding:15px 22px 10px}
 .inc-cond label{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--ink2);font-weight:500}
-.inc-cond input{width:72px;font-family:var(--mono);font-size:.95rem;font-weight:700;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;padding:7px 9px;text-align:center}
-.inc-cond input:focus{outline:none;border-color:var(--violet)}
+.inc-cond input{width:72px;font-family:var(--mono);font-size:.95rem;font-weight:700;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;padding:7px 9px;text-align:center;cursor:pointer;caret-color:transparent;user-select:none}
+.inc-cond input:focus{outline:none}
+.inc-cond input.on{border-color:var(--violet);background:rgba(167,139,250,.12);box-shadow:0 0 0 3px rgba(167,139,250,.20)}
+/* numpad ลอย (แทนปุ่มขึ้น-ลง) */
+.inc-pad{position:absolute;z-index:6;left:50%;width:236px;padding:12px;border-radius:18px;background:linear-gradient(160deg,rgba(32,40,63,.98),rgba(17,23,40,.98));border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 1px rgba(167,139,250,.12);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transform:translateX(-50%) translateY(2px) scale(.95);transform-origin:top center;transition:opacity .15s,transform .15s}
+.inc-pad.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(8px) scale(1)}
+.pad-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 4px 10px;font-size:.78rem;color:var(--ink2)}
+.pad-head b{font-family:var(--mono);font-size:1.2rem;line-height:1;color:var(--violet);font-weight:800}
+.pad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pad-grid button{font-family:var(--mono);font-size:1.18rem;font-weight:700;color:var(--ink);height:46px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.045);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s,background .12s,border-color .12s}
+.pad-grid button:hover{background:rgba(167,139,250,.16);border-color:rgba(167,139,250,.5);transform:translateY(-1px)}
+.pad-grid button:active{transform:translateY(1px) scale(.95)}
+.pad-grid .pad-fn{color:var(--rose);font-size:1.28rem}
+.pad-grid .pad-ok{color:var(--green);background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.42)}
+.pad-grid .pad-ok:hover{background:rgba(52,211,153,.28);border-color:rgba(52,211,153,.6)}
 .inc-note{padding:0 22px 13px;font-size:.8rem;color:var(--amber);font-style:italic;border-bottom:1px solid var(--line)}
 .inc-summary{padding:12px 22px;font-size:.9rem;color:var(--ink2);border-bottom:1px solid var(--line)}
 .inc-summary b{color:var(--gold);font-family:var(--mono)}
@@ -429,9 +442,18 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   <div class="inc-card">
     <div class="inc-head"><h3>🎁 ตรวจสอบ Incentive <span id="incCycle"></span></h3><button id="incExport" class="inc-export" title="ดาวน์โหลด Excel" disabled>⬇️ Excel</button><button id="incClose" title="ปิด">✕</button></div>
     <div class="inc-cond">
-      <label>ขั้น 1 · วันลา ≤ <input id="incLeave" type="number" inputmode="numeric" min="0" placeholder="–"> วัน</label>
-      <label>ขั้น 2.1 · talktime/วัน ≥ <input id="incTalk" type="number" inputmode="numeric" min="0" placeholder="–"> นาที</label>
-      <label>ขั้น 2.2 · สายโทร/วัน ≥ <input id="incCalls" type="number" inputmode="numeric" min="0" placeholder="–"> สาย</label>
+      <label>ขั้น 1 · วันลา ≤ <input id="incLeave" type="text" inputmode="none" readonly placeholder="–"> วัน</label>
+      <label>ขั้น 2.1 · talktime/วัน ≥ <input id="incTalk" type="text" inputmode="none" readonly placeholder="–"> นาที</label>
+      <label>ขั้น 2.2 · สายโทร/วัน ≥ <input id="incCalls" type="text" inputmode="none" readonly placeholder="–"> สาย</label>
+    </div>
+    <div id="incPad" class="inc-pad" aria-hidden="true">
+      <div class="pad-head"><span id="padLabel">วันลา</span><b id="padVal">–</b></div>
+      <div class="pad-grid">
+        <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+        <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+        <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+        <button type="button" data-k="back" class="pad-fn" title="ลบ">⌫</button><button type="button" data-k="0">0</button><button type="button" data-k="ok" class="pad-ok" title="ตกลง">✓</button>
+      </div>
     </div>
     <div class="inc-note">*incentive ขึ้นอยู่กับยอดขาย</div>
     <div class="inc-summary" id="incSummary"></div>
@@ -916,10 +938,11 @@ function renderIncentive(){
     </div>`;
   }).join('')+'</div>';
 }
-function closeInc(){ document.getElementById('incModal').classList.remove('on'); document.body.classList.remove('modal-open'); }
+function closeInc(){ closeIncPad(); document.getElementById('incModal').classList.remove('on'); document.body.classList.remove('modal-open'); }
 async function openIncentive(){
   document.getElementById('incCycle').textContent=document.getElementById('rangeLabel').textContent;
   ['incLeave','incTalk','incCalls'].forEach(id=>document.getElementById(id).value='');   // ว่างเสมอเมื่อเปิดใหม่
+  closeIncPad();   // ปิดแพดถ้าค้างจากครั้งก่อน
   incShowZero=false; PREV_SALES={}; PREV_UPSELL={}; RETURNS_PREV={};
   document.getElementById('incModal').classList.add('on');
   document.body.classList.add('modal-open');   // ล็อกพื้นหลังไม่ให้เลื่อน
@@ -1000,6 +1023,39 @@ async function exportIncentive(){
 document.getElementById('incExport').addEventListener('click',exportIncentive);
 document.getElementById('incModal').addEventListener('click',e=>{ if(e.target.id==='incModal') closeInc(); });
 ['incLeave','incTalk','incCalls'].forEach(id=>document.getElementById(id).addEventListener('input',renderIncentive));
+
+// ===== Numpad ช่องเกณฑ์ incentive (แตะช่อง→แพดลอย แทนปุ่มขึ้น-ลง) =====
+let incPadField=null;
+const INC_PAD_LABEL={incLeave:'วันลา ≤ (วัน)',incTalk:'talktime/วัน ≥ (นาที)',incCalls:'สายโทร/วัน ≥ (สาย)'};
+function incPadSync(){ const v=incPadField?incPadField.value:''; document.getElementById('padVal').textContent=v===''?'–':v; }
+function openIncPad(id){
+  incPadField=document.getElementById(id);
+  document.querySelectorAll('.inc-cond input').forEach(i=>i.classList.toggle('on',i===incPadField));
+  document.getElementById('padLabel').textContent=INC_PAD_LABEL[id]||'';
+  const pad=document.getElementById('incPad'), cond=document.querySelector('.inc-cond');
+  pad.style.top=(cond.offsetTop+cond.offsetHeight-6)+'px';   // เด้งใต้แถวเงื่อนไข
+  incPadSync(); pad.classList.add('on');
+}
+function closeIncPad(){
+  const pad=document.getElementById('incPad'); if(pad) pad.classList.remove('on');
+  document.querySelectorAll('.inc-cond input').forEach(i=>i.classList.remove('on')); incPadField=null;
+}
+function incPadPress(k){
+  if(!incPadField) return;
+  if(k==='ok'){ closeIncPad(); return; }
+  if(k==='back') incPadField.value=incPadField.value.slice(0,-1);
+  else { if(incPadField.value.length>=5) return; incPadField.value=(incPadField.value+k).replace(/^0+(?=\d)/,''); }   // กัน 0 นำหน้า
+  incPadSync();
+  incPadField.dispatchEvent(new Event('input',{bubbles:true}));   // → renderIncentive สด
+}
+document.querySelectorAll('.inc-cond input').forEach(inp=>{
+  inp.addEventListener('click',e=>{ e.stopPropagation(); openIncPad(inp.id); });
+});
+document.querySelectorAll('#incPad button').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); incPadPress(b.dataset.k); }));
+document.getElementById('incModal').addEventListener('click',e=>{   // แตะนอกแพด/นอกช่อง → ปิดแพด
+  const pad=document.getElementById('incPad');
+  if(pad.classList.contains('on') && !pad.contains(e.target) && !e.target.classList.contains('on')) closeIncPad();
+});
 
 // ===== Export ทุกหมวด → Excel หลายชีต (ของช่วงที่ดู · ทุกชีตเรียงตามรหัสพนักงาน) =====
 function exportSheetSpecs(){   // นิยามคอลัมน์เฉพาะของแต่ละหมวด (cycle-only 3 หมวดท้ายเฉพาะโหมดรอบเดือน)
