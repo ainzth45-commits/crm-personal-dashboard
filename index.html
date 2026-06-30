@@ -137,8 +137,8 @@ main{padding:20px 0 40px}
 .inc-cond input:focus{outline:none}
 .inc-cond input.on{border-color:var(--violet);background:rgba(167,139,250,.12);box-shadow:0 0 0 3px rgba(167,139,250,.20)}
 /* numpad ลอย (แทนปุ่มขึ้น-ลง) */
-.inc-pad{position:absolute;z-index:6;left:50%;width:236px;padding:12px;border-radius:18px;background:linear-gradient(160deg,rgba(32,40,63,.98),rgba(17,23,40,.98));border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 1px rgba(167,139,250,.12);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transform:translateX(-50%) translateY(2px) scale(.95);transform-origin:top center;transition:opacity .15s,transform .15s}
-.inc-pad.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(8px) scale(1)}
+.inc-pad{position:fixed;z-index:300;width:232px;padding:12px;border-radius:18px;background:linear-gradient(160deg,rgba(32,40,63,.98),rgba(17,23,40,.98));border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 1px rgba(167,139,250,.12);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transform:translateY(-4px) scale(.95);transform-origin:top center;transition:opacity .15s,transform .15s}
+.inc-pad.on{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
 .pad-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 4px 10px;font-size:.78rem;color:var(--ink2)}
 .pad-head b{font-family:var(--mono);font-size:1.2rem;line-height:1;color:var(--violet);font-weight:800}
 .pad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -1032,8 +1032,12 @@ function openIncPad(id){
   incPadField=document.getElementById(id);
   document.querySelectorAll('.inc-cond input').forEach(i=>i.classList.toggle('on',i===incPadField));
   document.getElementById('padLabel').textContent=INC_PAD_LABEL[id]||'';
-  const pad=document.getElementById('incPad'), cond=document.querySelector('.inc-cond');
-  pad.style.top=(cond.offsetTop+cond.offsetHeight-6)+'px';   // เด้งใต้แถวเงื่อนไข
+  const pad=document.getElementById('incPad'), r=incPadField.getBoundingClientRect(), padW=232, padH=250;
+  let left=r.left+r.width/2-padW/2;                       // จัดกลางใต้ช่อง
+  left=Math.max(8, Math.min(left, window.innerWidth-padW-8));   // ไม่ล้นจอซ้าย/ขวา
+  let top=r.bottom+8;
+  if(top+padH>window.innerHeight-8) top=Math.max(8, r.top-padH-8);   // ถ้าล้นล่าง → พลิกขึ้นบนช่อง
+  pad.style.left=left+'px'; pad.style.top=top+'px';
   incPadSync(); pad.classList.add('on');
 }
 function closeIncPad(){
@@ -1048,13 +1052,15 @@ function incPadPress(k){
   incPadSync();
   incPadField.dispatchEvent(new Event('input',{bubbles:true}));   // → renderIncentive สด
 }
+document.body.appendChild(document.getElementById('incPad'));   // ย้ายแพดออกนอกการ์ด (กัน overflow:hidden ตัด)
 document.querySelectorAll('.inc-cond input').forEach(inp=>{
   inp.addEventListener('click',e=>{ e.stopPropagation(); openIncPad(inp.id); });
 });
 document.querySelectorAll('#incPad button').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); incPadPress(b.dataset.k); }));
-document.getElementById('incModal').addEventListener('click',e=>{   // แตะนอกแพด/นอกช่อง → ปิดแพด
-  const pad=document.getElementById('incPad');
-  if(pad.classList.contains('on') && !pad.contains(e.target) && !e.target.classList.contains('on')) closeIncPad();
+document.addEventListener('click',e=>{   // แตะที่อื่น (นอกแพด/นอกช่อง) → ปิดแพด
+  if(!incPadField) return;
+  if(e.target.closest('#incPad') || e.target.closest('.inc-cond input')) return;
+  closeIncPad();
 });
 
 // ===== Export ทุกหมวด → Excel หลายชีต (ของช่วงที่ดู · ทุกชีตเรียงตามรหัสพนักงาน) =====
