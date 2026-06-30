@@ -390,6 +390,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   <input id="picker" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
   <div class="spacer"></div>
   <span class="upd" id="upd"></span>
+  <button class="iconbtn" id="exportAll" title="ดาวน์โหลด Excel ทุกหมวด (ของช่วงที่ดู)"><i class="fa-solid fa-file-arrow-down"></i></button>
   <button class="iconbtn" id="refresh" title="รีเฟรช"><i class="fa-solid fa-rotate"></i></button>
 </div></div>
 
@@ -861,7 +862,7 @@ function incTier(s){   // ยอดขายรอบก่อน → [ขั้
   if(s>300000) return [1250,625,625];
   if(s>250000) return [1000,500,500];
   if(s>200000) return [750,375,375];
-  if(s>150000) return [750,250,250];
+  if(s>150000) return [500,250,250];
   return [0,0,0];   // ≤150,000 อดหมด
 }
 function prevCycleRange(){   // รอบก่อนรอบที่กำลังดู (เช่น ดู มิ.ย. → ใช้ยอด พ.ค.)
@@ -878,7 +879,7 @@ function renderIncentive(){
   const maxLeave=+leaveRaw||0;
   const minTalk=(+document.getElementById('incTalk').value||0)*60;   // นาที→วินาที
   const minCalls=+document.getElementById('incCalls').value||0;
-  const rows=AGG.filter(teamMatch).map(a=>{
+  const allRows=AGG.filter(teamMatch).map(a=>{
     const leave=Math.max(0, EXPECT_WD - a.days);   // วันลา: a.days = วันมาจริงรวมอาทิตย์/วันหยุด (มาทำวันหยุด=สลับหยุดวันธรรมดาได้ ไม่ถือว่าลา · มาเกิน EXPECT_WD → ลา 0)
     const tpd=a.workDays?a.workTalk/a.workDays:0, cpd=a.workDays?a.workCalls/a.workDays:0;
     const t1=leave<=maxLeave, t2a=t1&&tpd>=minTalk, t2b=t1&&cpd>=minCalls;
@@ -886,12 +887,13 @@ function renderIncentive(){
     const base=psales+pup, net=Math.max(0,base-pret), tier=incTier(net);   // ยอด+อัพ−ตีกลับ แล้วเทียบเกณฑ์
     const amt=(t1?tier[0]:0)+(t2a?tier[1]:0)+(t2b?tier[2]:0);   // รวมเงินที่คนนี้ได้
     return {a,leave,tpd,cpd,t1,t2a,t2b,psales,pup,pret,base,net,tier,amt,count:(t1?1:0)+(t2a?1:0)+(t2b?1:0)};
-  }).filter(x=>x.t1);   // เฉพาะผ่านขั้น 1
+  });
+  const rows=allRows.filter(x=>x.t1);   // เฉพาะผ่านขั้น 1 (ใช้สรุปบนจอ)
   const earners=rows.filter(r=>r.amt>0).sort((p,q)=>q.amt-p.amt||q.count-p.count||q.tpd-p.tpd);   // ได้เงินจริง
   const zeros=rows.filter(r=>r.amt===0).sort((p,q)=>q.count-p.count||q.tpd-p.tpd);   // ผ่านเงื่อนไขแต่ยอดรอบก่อนไม่ถึง (อด)
   const total=earners.reduce((s,r)=>s+r.amt,0);
-  incData={earners,zeros,total,maxLeave,minTalk,minCalls,cycleLabel:document.getElementById('incCycle').textContent};   // เก็บไว้ export
-  const exBtn=document.getElementById('incExport'); if(exBtn) exBtn.disabled=!earners.length;
+  incData={earners,zeros,allRows,total,maxLeave,minTalk,minCalls,cycleLabel:document.getElementById('incCycle').textContent};   // เก็บไว้ export (allRows = ทุกคนในทีมที่เลือก)
+  const exBtn=document.getElementById('incExport'); if(exBtn) exBtn.disabled=!allRows.length;
   document.getElementById('incSummary').innerHTML=
     `ได้ incentive: <b>${earners.length}</b> คน · รวมแจก <b>฿${baht(total)}</b>`
     + (zeros.length?` <button id="incZeroBtn" class="inc-zerobtn">${incShowZero?'← ดูคนที่ได้ incentive':'ดูเฉพาะคนยอดไม่ถึง ('+zeros.length+')'}</button>`:'');
@@ -943,11 +945,12 @@ function loadExcelJS(){ return new Promise((res,rej)=>{ if(window.ExcelJS)return
   s.onload=()=>res(); s.onerror=()=>rej(new Error('โหลด ExcelJS ไม่ได้')); document.head.appendChild(s); }); }
 function teamNameOf(id){ const e=EMP[id]; if(!e)return '-'; const t=TEAMS.find(x=>x.id===e.team_id); return t?t.name:'-'; }
 async function exportIncentive(){
-  if(!incData||!incData.earners.length) return;
+  if(!incData||!incData.allRows||!incData.allRows.length) return;
   const btn=document.getElementById('incExport'), old=btn.textContent; btn.disabled=true; btn.textContent='⏳ กำลังสร้าง...';
   try{
     await loadExcelJS();
-    const {earners,total,maxLeave,minTalk,minCalls,cycleLabel}=incData;
+    const {earners,allRows,total,maxLeave,minTalk,minCalls,cycleLabel}=incData;
+    const list=[...allRows].sort((p,q)=>String(p.a.id).localeCompare(String(q.a.id),'en',{numeric:true}));   // ทุกคนในทีม เรียงตามรหัสพนักงาน
     const wb=new ExcelJS.Workbook(); wb.creator='CRM Dashboard';
     const ws=wb.addWorksheet('Incentive',{views:[{state:'frozen',ySplit:3}]});
     const headers=['ลำดับ','รหัส','ชื่อ','ทีม','วันลา','Talktime/วัน','สายโทร/วัน','ขั้น 1','Talktime','สายโทร','ยอดขาย','อัพเซล','ตีกลับ','สุทธิ','เงินขั้น 1','เงิน Talktime','เงินสายโทร','รวม (฿)'];
@@ -965,9 +968,9 @@ async function exportIncentive(){
     hr.eachCell(c=>{ c.font={bold:true,size:10,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF334155'}}; c.alignment={vertical:'middle',horizontal:'center',wrapText:true}; c.border=border; }); hr.height=30;
     // data
     let rn=4;
-    earners.forEach((r,idx)=>{
+    list.forEach((r,idx)=>{
       const e=EMP[r.a.id]||{}, row=ws.getRow(rn);
-      const vals=[idx+1,r.a.id,e.name||r.a.id,teamNameOf(r.a.id),r.leave,fmtTime(r.tpd),Math.round(r.cpd),'✓',r.t2a?'✓':'✗',r.t2b?'✓':'✗',r.psales,r.pup,r.pret,r.net,r.t1?r.tier[0]:0,r.t2a?r.tier[1]:0,r.t2b?r.tier[2]:0,r.amt];
+      const vals=[idx+1,r.a.id,e.name||r.a.id,teamNameOf(r.a.id),r.leave,fmtTime(r.tpd),Math.round(r.cpd),r.t1?'✓':'✗',r.t2a?'✓':'✗',r.t2b?'✓':'✗',r.psales,r.pup,r.pret,r.net,r.t1?r.tier[0]:0,r.t2a?r.tier[1]:0,r.t2b?r.tier[2]:0,r.amt];
       vals.forEach((v,i)=>row.getCell(i+1).value=v);
       const zebra=idx%2?'FFF1F5F9':'FFFFFFFF';
       row.eachCell((c,col)=>{ c.border=border; if(!c.font)c.font={}; c.font={size:10}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:zebra}};
@@ -982,8 +985,8 @@ async function exportIncentive(){
     });
     // total row
     const tr=ws.getRow(rn); ws.mergeCells(rn,1,rn,10); const tc=tr.getCell(1);
-    tc.value='รวมทั้งหมด · ได้ incentive '+earners.length+' คน'; tc.alignment={vertical:'middle',horizontal:'right',indent:1}; tc.font={bold:true,size:11};
-    const sumCol=c=>{ let s=0; earners.forEach(r=>{ s+=({11:r.psales,12:r.pup,13:r.pret,14:r.net,15:(r.t1?r.tier[0]:0),16:(r.t2a?r.tier[1]:0),17:(r.t2b?r.tier[2]:0),18:r.amt})[c]; }); return s; };
+    tc.value='รวมทั้งหมด · '+list.length+' คน · ได้ incentive '+earners.length+' คน'; tc.alignment={vertical:'middle',horizontal:'right',indent:1}; tc.font={bold:true,size:11};
+    const sumCol=c=>{ let s=0; list.forEach(r=>{ s+=({11:r.psales,12:r.pup,13:r.pret,14:r.net,15:(r.t1?r.tier[0]:0),16:(r.t2a?r.tier[1]:0),17:(r.t2b?r.tier[2]:0),18:r.amt})[c]; }); return s; };
     [11,12,13,14,15,16,17,18].forEach(col=>{ const c=tr.getCell(col); c.value=sumCol(col); c.numFmt='#,##0'; c.alignment={vertical:'middle',horizontal:'right'}; c.font={bold:true,size:11,color: col===18?{argb:'FF1A1400'}:undefined}; });
     tr.eachCell(c=>{ c.border=border; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFDE68A'}}; }); tr.height=24;
     // download
@@ -992,11 +995,79 @@ async function exportIncentive(){
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
     a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),3000);
   }catch(e){ alert('Export ไม่สำเร็จ: '+e.message); console.error(e); }
-  btn.textContent=old; btn.disabled=!incData||!incData.earners.length;
+  btn.textContent=old; btn.disabled=!incData||!incData.allRows||!incData.allRows.length;
 }
 document.getElementById('incExport').addEventListener('click',exportIncentive);
 document.getElementById('incModal').addEventListener('click',e=>{ if(e.target.id==='incModal') closeInc(); });
 ['incLeave','incTalk','incCalls'].forEach(id=>document.getElementById(id).addEventListener('input',renderIncentive));
+
+// ===== Export ทุกหมวด → Excel หลายชีต (ของช่วงที่ดู · ทุกชีตเรียงตามรหัสพนักงาน) =====
+function exportSheetSpecs(){   // นิยามคอลัมน์เฉพาะของแต่ละหมวด (cycle-only 3 หมวดท้ายเฉพาะโหมดรอบเดือน)
+  const specs=[
+    {title:'ยอดขาย',cols:[{h:'ยอดขาย (฿)',t:'money',g:a=>a.sales},{h:'บิล',t:'int',g:a=>a.bills},{h:'AOV (฿)',t:'money',g:a=>a.paidBills?a.sales/a.paidBills:0}]},
+    {title:'Talktime รวม',cols:[{h:'Talktime รวม',t:'time',g:a=>a.talk},{h:'สายคุย',t:'int',g:a=>a.qual},{h:'วันทำงาน',t:'int',g:a=>a.workDays},{h:'เฉลี่ย/วัน',t:'time',g:a=>a.workDays?a.workTalk/a.workDays:0}]},
+    {title:'เฉลี่ยต่อสาย',cols:[{h:'เฉลี่ย/สาย',t:'time',g:a=>a.qual?a.talk/a.qual:0},{h:'สายคุย',t:'int',g:a=>a.qual},{h:'Talktime รวม',t:'time',g:a=>a.talk}]},
+    {title:'รับสาย %',cols:[{h:'รับสาย %',t:'pct',g:a=>a.calls?a.answered/a.calls*100:0},{h:'รับสาย',t:'int',g:a=>a.answered},{h:'สายเข้า',t:'int',g:a=>a.calls}]},
+    {title:'AOV',cols:[{h:'AOV (฿)',t:'money',g:a=>a.paidBills?a.sales/a.paidBills:0},{h:'บิลมียอด',t:'int',g:a=>a.paidBills},{h:'ยอดขาย (฿)',t:'money',g:a=>a.sales}]},
+    {title:'ยอดอัพเซล',cols:[{h:'ยอดอัพเซล (฿)',t:'money',g:a=>a.upsum},{h:'จำนวนครั้ง',t:'int',g:a=>a.upcnt},{h:'เฉลี่ย/ครั้ง (฿)',t:'money',g:a=>a.upcnt?a.upsum/a.upcnt:0}]},
+  ];
+  if(curRange==='cycle') specs.push(
+    {title:'Talktime ต่อวัน',cols:[{h:'Talktime/วัน',t:'time',g:a=>a.workDays?a.workTalk/a.workDays:0},{h:'วันทำงาน',t:'int',g:a=>a.workDays},{h:'Talktime รวม',t:'time',g:a=>a.workTalk}]},
+    {title:'สายโทรต่อวัน',cols:[{h:'สาย/วัน',t:'num1',g:a=>a.workDays?a.workCalls/a.workDays:0},{h:'วันทำงาน',t:'int',g:a=>a.workDays},{h:'สายโทรรวม',t:'int',g:a=>a.workCalls}]},
+    {title:'ยอดตีกลับ',cols:[{h:'ยอดตีกลับ (฿)',t:'money',g:a=>RETURNS_VIEW[a.id]||0}]}
+  );
+  return specs;
+}
+async function exportAllMetrics(){
+  const rows=AGG.filter(teamMatch);
+  if(!rows.length){ alert('ไม่มีข้อมูลในช่วง/ทีมที่เลือก'); return; }
+  const btn=document.getElementById('exportAll'), oldHTML=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>';
+  try{
+    await loadExcelJS();
+    const sorted=[...rows].sort((p,q)=>String(p.id).localeCompare(String(q.id),'en',{numeric:true}));   // ทุกชีตเรียงตามรหัส
+    const rangeLabel=(document.getElementById('rangeLabel').textContent||'').trim();
+    const wb=new ExcelJS.Workbook(); wb.creator='CRM Dashboard';
+    const thin={style:'thin',color:{argb:'FFCBD5E1'}}, border={top:thin,left:thin,bottom:thin,right:thin};
+    const fmtOf={money:'#,##0',int:'#,##0',num1:'#,##0.0',pct:'0"%"'};
+    exportSheetSpecs().forEach(spec=>{
+      const cols=[{h:'ลำดับ',t:'idx'},{h:'รหัส',t:'code'},{h:'ชื่อ',t:'name'},{h:'ทีม',t:'team'},...spec.cols], N=cols.length;
+      const ws=wb.addWorksheet(spec.title.replace(/[\\/?*\[\]:]/g,' ').slice(0,31),{views:[{state:'frozen',ySplit:3}]});
+      ws.columns=cols.map(c=>({width: c.t==='name'?22:(c.t==='team'?12:(c.t==='idx'?6:(c.t==='code'?8:14)))}));
+      ws.mergeCells(1,1,1,N); const c1=ws.getCell(1,1); c1.value=spec.title+'   ·   '+rangeLabel;
+      c1.font={bold:true,size:14,color:{argb:'FFFFFFFF'}}; c1.alignment={vertical:'middle',indent:1}; c1.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0F172A'}}; ws.getRow(1).height=28;
+      ws.mergeCells(2,1,2,N); const c2=ws.getCell(2,1); c2.value='ทุกคนในทีมที่เลือก · เรียงตามรหัสพนักงาน · '+sorted.length+' คน';
+      c2.font={size:10,italic:true,color:{argb:'FF475569'}}; c2.alignment={vertical:'middle',indent:1}; ws.getRow(2).height=18;
+      const hr=ws.getRow(3); cols.forEach((c,i)=>hr.getCell(i+1).value=c.h);
+      hr.eachCell(c=>{ c.font={bold:true,size:10,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF334155'}}; c.alignment={vertical:'middle',horizontal:'center',wrapText:true}; c.border=border; }); hr.height=26;
+      let rn=4;
+      sorted.forEach((a,idx)=>{
+        const e=EMP[a.id]||{}, row=ws.getRow(rn), zebra=idx%2?'FFF1F5F9':'FFFFFFFF';
+        cols.forEach((c,i)=>{
+          const cell=row.getCell(i+1); let v;
+          if(c.t==='idx') v=idx+1;
+          else if(c.t==='code') v=a.id;
+          else if(c.t==='name') v=e.name||a.id;
+          else if(c.t==='team') v=teamNameOf(a.id);
+          else if(c.t==='time') v=fmtTime(c.g(a));
+          else if(c.t==='num1') v=Math.round(c.g(a)*10)/10;
+          else v=Math.round(c.g(a));   // money · int · pct
+          cell.value=v; cell.border=border; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:zebra}};
+          const center=['idx','code','int','pct','time','num1'].includes(c.t);
+          cell.alignment={vertical:'middle',horizontal: center?'center':(c.t==='money'?'right':'left')};
+          cell.font=(c.t==='name')?{size:10,bold:true}:{size:10};
+          if(fmtOf[c.t]) cell.numFmt=fmtOf[c.t];
+        });
+        row.height=18; rn++;
+      });
+    });
+    const buf=await wb.xlsx.writeBuffer();
+    const safe=rangeLabel.replace(/[^0-9A-Za-zก-๙]+/g,'-').replace(/^-+|-+$/g,'')||'report';
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download='รายงานทุกหมวด-'+safe+'.xlsx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  }catch(e){ alert('Export ไม่สำเร็จ: '+e.message); console.error(e); }
+  btn.innerHTML=oldHTML; btn.disabled=false;
+}
+document.getElementById('exportAll').addEventListener('click',exportAllMetrics);
 
 // ===== เพิ่ม/อัพเดตยอดตีกลับ (เขียนผ่าน edge function returns-admin) =====
 function closeRtn(){ document.getElementById('rtnModal').classList.remove('on'); document.body.classList.remove('modal-open'); }
