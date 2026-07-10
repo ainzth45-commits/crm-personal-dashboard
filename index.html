@@ -591,6 +591,7 @@ function cycleRange(y,m){
 function getRange(){ return curRange==='cycle'?cycleR : (curRange==='custom'?customR : rangeOf(curRange)); }
 const cycleKey=(y,m)=>`${y}-${pad(m)}`;                  // key รอบเดือนในตาราง returns
 function prevCycleKey(){ let y=+cYear.value, m=+cMonth.value-1; if(m<1){m=12;y--;} return cycleKey(y,m); }
+async function loadTargets(key){ const o={}; const{data,error}=await sb.from('monthly_targets').select('employee_id,target').eq('cycle',key); if(!error&&data) data.forEach(x=>o[x.employee_id]=Number(x.target)||0); return o; }
 async function loadReturns(key){ const o={}; const{data,error}=await sb.from('returns').select('employee_id,amount').eq('cycle',key); if(!error&&data) data.forEach(x=>o[x.employee_id]=Number(x.amount)||0); return o; }
 async function loadLeaves(key){ const o={}; const{data,error}=await sb.from('leaves').select('employee_id,days').eq('cycle',key); if(!error&&data) data.forEach(x=>o[x.employee_id]=Number(x.days)||0); return o; }
 
@@ -664,9 +665,14 @@ const avaImg=(e)=>e.photo?`<img src="${e.photo}" referrerpolicy="no-referrer" on
 let curRange='today',curMetric='sales',AGG=[],pollTimer=null,rtTimer=null,channel=null;
 let RETURNS_VIEW={}, RETURNS_PREV={};   // ยอดตีกลับ: รอบที่ดู (โชว์) / รอบก่อน (ใช้หักตอนคิด incentive)
 let LEAVE_VIEW={};   // วันลารอบที่ดู (หัวหน้ากรอก) — ใช้ในเกณฑ์ incentive ขั้น 1
+let TARGETS_VIEW={};   // เป้ายอดขายรอบเดือน (monthly_targets — รอบ 26-25) โหลดเฉพาะโหมดรอบเดือน
 function fmtDays(v){ return String(Math.round((Number(v)||0)*100)/100); }   // ตัด .0 ท้าย (1.5→"1.5", 2→"2")
 const METRICS={
-  sales:{unit:'฿',color:'var(--green)',val:a=>a.sales,fmt:v=>baht(v),sub:a=>`${nf(a.bills)} บิล · AOV ${a.paidBills?baht(a.sales/a.paidBills):'-'}`,keep:a=>a.calls>0||a.bills>0},
+  sales:{unit:'฿',color:'var(--green)',val:a=>a.sales,fmt:v=>baht(v),
+    sub:a=>{const b=`${nf(a.bills)} บิล · AOV ${a.paidBills?baht(a.sales/a.paidBills):'-'}`;
+      const t=TARGETS_VIEW[a.id]; if(!t)return b;
+      return b+` · เป้า ${(a.sales/t*100).toFixed(1)}%`;},   // % ของเป้ารอบเดือน (26-25)
+    keep:a=>a.calls>0||a.bills>0},
   talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>fmtTime(v),sub:a=>`เฉลี่ย ${fmtTime(a.workTalk/(a.workDays||1))}/วัน · ${nf(a.workCalls/(a.workDays||1))} สาย/วัน · ${nf(a.workDays)} วันทำงาน`,keep:a=>a.calls>0},
   avgtalk:{unit:'/สายคุย',color:'var(--amber)',val:a=>a.qual?a.talk/a.qual:0,fmt:v=>fmtTime(v),sub:a=>`${nf(a.qual)} สายคุย · รวม ${fmtTime(a.talk)}`,keep:a=>a.qual>0},
   answer:{unit:'%',color:'var(--blue)',val:a=>a.calls?a.answered/a.calls*100:0,fmt:v=>v.toFixed(0)+'%',sub:a=>`รับ ${nf(a.answered)}/${nf(a.calls)} สาย`,keep:a=>a.calls>0},
@@ -700,10 +706,10 @@ async function load(silent){
     if(curRange==='cycle'){
       document.getElementById('rangeLabel').textContent=r.label+' · '+EXPECT_WD+' วันทำงาน';
       const ck=cycleKey(+cYear.value,+cMonth.value);
-      const [rv,lv]=await Promise.all([loadReturns(ck),loadLeaves(ck)]);   // ยอดตีกลับ + วันลา รอบนี้
+      const [rv,lv,tv]=await Promise.all([loadReturns(ck),loadLeaves(ck),loadTargets(ck)]);   // ตีกลับ + วันลา + เป้ารอบนี้
       if(seq!==_loadSeq)return;
-      RETURNS_VIEW=rv; LEAVE_VIEW=lv;
-    } else { RETURNS_VIEW={}; LEAVE_VIEW={}; }
+      RETURNS_VIEW=rv; LEAVE_VIEW=lv; TARGETS_VIEW=tv;
+    } else { RETURNS_VIEW={}; LEAVE_VIEW={}; TARGETS_VIEW={}; }
     renderKpis(); renderRank();
     document.getElementById('upd').textContent='อัปเดต '+new Date().toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',second:'2-digit'});
     setupLive(r.live);
@@ -721,7 +727,8 @@ let _kpiInit=false,_firstKpi=true,_podInit=false,rowMap={},lastMetric=null,kpiMe
 function kpiSpec(m,T,closers,retCount,lvCount){
   const div=(a,b)=>b?a/b:0;
   const S={
-    sales:   {c:'var(--green)', i1:'fa-sack-dollar', l1:'ยอดขายรวม',            v1:T.sales, f1:baht,   u1:'฿',     s1:`${nf(T.bills)} บิล · ปิดได้ ${nf(closers)} คน`,
+    sales:   {c:'var(--green)', i1:'fa-sack-dollar', l1:'ยอดขายรวม',            v1:T.sales, f1:baht,   u1:'฿',
+              s1:`${nf(T.bills)} บิล · ปิดได้ ${nf(closers)} คน`+(T.target?` · เป้ารวม ${baht(T.target)}฿ · <b style="color:${T.sales/T.target>=1?'var(--green)':(T.sales/T.target>=0.5?'var(--amber)':'#f87171')}">${(T.sales/T.target*100).toFixed(1)}%</b>`:''),
                                   i2:'fa-receipt',     l2:'AOV เฉลี่ยทั้งทีม',     v2:div(T.sales,T.paid), f2:baht, u2:'฿/บิล', s2:'ยอดขาย ÷ บิลที่มียอด (ไม่นับบิล 0)'},
     aov:     {c:'var(--violet)', i1:'fa-sack-dollar', l1:'ยอดขายรวม',            v1:T.sales, f1:baht,   u1:'฿',     s1:`${nf(T.bills)} บิล · ปิดได้ ${nf(closers)} คน`,
                                   i2:'fa-receipt',     l2:'AOV เฉลี่ยทั้งทีม',     v2:div(T.sales,T.paid), f2:baht, u2:'฿/บิล', s2:'ยอดขาย ÷ บิลที่มียอด (ไม่นับบิล 0)'},
@@ -753,6 +760,7 @@ function renderKpis(){
   const closers=A.filter(a=>a.paidBills>0).length;
   const retVals=A.map(a=>RETURNS_VIEW[a.id]||0); T.returns=retVals.reduce((s,v)=>s+v,0); const retCount=retVals.filter(v=>v>0).length;
   const lvVals=A.map(a=>LEAVE_VIEW[a.id]||0); T.leave=lvVals.reduce((s,v)=>s+v,0); const lvCount=lvVals.filter(v=>v>0).length;
+  T.target=A.reduce((s,a)=>s+(TARGETS_VIEW[a.id]||0),0);   // เป้ารวมของคนที่กำลังดู (ตาม filter ทีม)
   const sp=kpiSpec(curMetric,T,closers,retCount,lvCount);
   const metricChanged=kpiMetric!==curMetric;
   if(!_kpiInit||metricChanged){
