@@ -201,6 +201,14 @@ body.modal-open{overflow:hidden}   /* popup incentive เปิดอยู่ �
 .inc-export:disabled{opacity:.4;cursor:default}
 .inc-empty{text-align:center;color:var(--muted);padding:30px}
 /* แถบปุ่มเพิ่มยอดตีกลับ + modal กรอกยอด */
+.pod .pbar{display:none;height:8px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden;margin:11px auto 0;width:100%}
+.pod-1 .pbar{margin-top:12px}
+.pod .pbar i{display:block;height:100%;border-radius:999px;background:var(--ac,#facc15);width:0;transition:width .55s cubic-bezier(.25,1,.3,1)}
+#targetBar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+.tgt-seg{display:inline-flex;gap:5px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tgt-seg button{font-family:inherit;font-size:.86rem;font-weight:700;border:none;background:transparent;color:var(--ink2);padding:7px 14px;border-radius:9px;cursor:pointer;transition:.16s}
+.tgt-seg button:hover{color:var(--ink)}
+.tgt-seg button.active{background:rgba(250,204,21,.18);color:#facc15}
 #returnsBar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
 #rtnAddBtn{font-family:inherit;font-size:.9rem;font-weight:700;border:1px solid rgba(248,113,113,.5);background:rgba(248,113,113,.13);color:#f87171;padding:9px 15px;border-radius:12px;cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:7px}
 #rtnAddBtn:hover{background:rgba(248,113,113,.24)}
@@ -448,6 +456,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 
   <div class="tabs" id="tabs">
     <button data-m="sales" class="active" style="--ac:var(--green)"><span class="d"></span>ยอดขาย</button>
+    <button data-m="target" class="cycle-only" style="--ac:#facc15"><span class="d"></span>เป้าหมาย</button>
     <button data-m="talk" style="--ac:var(--teal)"><span class="d"></span>Talktime รวม</button>
     <button data-m="avgtalk" style="--ac:var(--amber)"><span class="d"></span>เฉลี่ย/สาย</button>
     <button data-m="answer" style="--ac:var(--blue)"><span class="d"></span>รับสาย %</button>
@@ -462,6 +471,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 
   <div id="returnsBar" style="display:none"><button id="rtnAddBtn" type="button"><i class="fa-solid fa-pen-to-square"></i> เพิ่ม / อัพเดตยอดตีกลับ</button><span class="rtn-bar-note">ตีกลับของรอบนี้ · ใช้หักยอดตอนคิด incentive รอบถัดไป</span></div>
   <div id="leaveBar" style="display:none"><button id="lvAddBtn" type="button"><i class="fa-solid fa-calendar-xmark"></i> เพิ่ม / อัพเดตวันลา</button><span class="rtn-bar-note">วันลาของรอบนี้ · หัวหน้าฝ่ายขายกรอกเอง · ใช้ในเกณฑ์ incentive ขั้น 1</span></div>
+  <div id="targetBar" style="display:none"><span class="tgt-seg"><button data-tv="pct" class="active" type="button">% ที่ทำได้</button><button data-tv="amount" type="button">เป้าที่ตั้งไว้</button></span><span class="rtn-bar-note">กดสลับดู — % ที่ทำได้ ↔ เป้าที่ตั้งไว้ (บาท)</span></div>
 
   <div class="board">
     <div class="feat" id="feat"></div>
@@ -665,6 +675,7 @@ const ini=nm=>(nm||'?').trim().charAt(0);
 const avaImg=(e)=>e.photo?`<img src="${e.photo}" referrerpolicy="no-referrer" onerror="this.parentNode.textContent='${ini(e.name)}'">`:ini(e.name);
 
 let curRange='today',curMetric='sales',AGG=[],pollTimer=null,rtTimer=null,channel=null;
+let targetView='pct';   // หมวดเป้าหมาย: 'pct'=% ที่ทำได้ · 'amount'=เป้าที่ตั้งไว้ (บาท)
 let RETURNS_VIEW={}, RETURNS_PREV={};   // ยอดตีกลับ: รอบที่ดู (โชว์) / รอบก่อน (ใช้หักตอนคิด incentive)
 let LEAVE_VIEW={};   // วันลารอบที่ดู (หัวหน้ากรอก) — ใช้ในเกณฑ์ incentive ขั้น 1
 let TARGETS_VIEW={};   // เป้ายอดขายรอบเดือน (monthly_targets — รอบ 26-25) โหลดเฉพาะโหมดรอบเดือน
@@ -675,6 +686,12 @@ const METRICS={
       const t=TARGETS_VIEW[a.id]; if(!t)return b;
       return b+` · เป้า ${(a.sales/t*100).toFixed(1)}%`;},   // % ของเป้ารอบเดือน (26-25)
     keep:a=>a.calls>0||a.bills>0},
+  target:{color:'#facc15',
+    get unit(){return targetView==='amount'?'฿':'%';},
+    val:a=>{const t=TARGETS_VIEW[a.id]||0; return targetView==='amount'?t:(t?a.sales/t*100:0);},
+    fmt:v=>targetView==='amount'?baht(v):v.toFixed(1),
+    sub:a=>{const t=TARGETS_VIEW[a.id]||0; return `ยอด ${baht(a.sales)}฿ · เป้า ${baht(t)}฿ · ${t?(a.sales/t*100).toFixed(1):'0'}%`;},
+    keep:a=>(TARGETS_VIEW[a.id]||0)>0},
   talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>fmtTime(v),sub:a=>`เฉลี่ย ${fmtTime(a.workTalk/(a.workDays||1))}/วัน · ${nf(a.workCalls/(a.workDays||1))} สาย/วัน · ${nf(a.workDays)} วันทำงาน`,keep:a=>a.calls>0},
   avgtalk:{unit:'/สายคุย',color:'var(--amber)',val:a=>a.qual?a.talk/a.qual:0,fmt:v=>fmtTime(v),sub:a=>`${nf(a.qual)} สายคุย · รวม ${fmtTime(a.talk)}`,keep:a=>a.qual>0},
   answer:{unit:'%',color:'var(--blue)',val:a=>a.calls?a.answered/a.calls*100:0,fmt:v=>v.toFixed(0)+'%',sub:a=>`รับ ${nf(a.answered)}/${nf(a.calls)} สาย`,keep:a=>a.calls>0},
@@ -695,7 +712,7 @@ function showLoading(b){const el=document.getElementById('boardLoad');if(el)el.c
 function isMultiDay(r){ return (Date.parse(r.end)-Date.parse(r.start)) > 86400000; }
 function metricAllowed(m,md){
   if(m==='talkday'||m==='callday'||m==='ansday') return md;
-  if(m==='returns'||m==='leave')   return curRange==='cycle';
+  if(m==='returns'||m==='leave'||m==='target') return curRange==='cycle';
   return true;
 }
 async function load(silent){
@@ -747,6 +764,8 @@ function kpiSpec(m,T,closers,retCount,lvCount){
     sales:   {c:'var(--green)', i1:'fa-sack-dollar', l1:'ยอดขายรวม',            v1:T.sales, f1:baht,   u1:'฿',
               s1:`${nf(T.bills)} บิล · ปิดได้ ${nf(closers)} คน`+(T.target?` · เป้ารวม ${baht(T.target)}฿ · <b style="color:${T.sales/T.target>=1?'var(--green)':(T.sales/T.target>=0.5?'var(--amber)':'#f87171')}">${(T.sales/T.target*100).toFixed(1)}%</b>`:''),
                                   i2:'fa-receipt',     l2:'AOV เฉลี่ยทั้งทีม',     v2:div(T.sales,T.paid), f2:baht, u2:'฿/บิล', s2:'ยอดขาย ÷ บิลที่มียอด (ไม่นับบิล 0)'},
+    target:  {c:'#facc15',       i1:'fa-bullseye',    l1:'ยอดขายรวมทั้งทีม',      v1:T.sales, f1:baht,   u1:'฿',     s1:`เป้ารวม ${baht(T.target)}฿`,
+                                  i2:'fa-percent',     l2:'% เป้ารวมทั้งทีม',      v2:div(T.sales,T.target)*100, f2:v=>v.toFixed(1), u2:'%', s2:'ยอดขายรวม ÷ เป้ารวม'},
     aov:     {c:'var(--violet)', i1:'fa-sack-dollar', l1:'ยอดขายรวม',            v1:T.sales, f1:baht,   u1:'฿',     s1:`${nf(T.bills)} บิล · ปิดได้ ${nf(closers)} คน`,
                                   i2:'fa-receipt',     l2:'AOV เฉลี่ยทั้งทีม',     v2:div(T.sales,T.paid), f2:baht, u2:'฿/บิล', s2:'ยอดขาย ÷ บิลที่มียอด (ไม่นับบิล 0)'},
     talk:    {c:'var(--teal)',   i1:'fa-clock',        l1:'Talktime รวมทั้งทีม',   v1:T.talk,  f1:fmtTime, u1:'',     s1:'รวมทุกสายของทั้งทีม',
@@ -799,7 +818,8 @@ function buildPodium(){
       <div class="pod-top">
         <div class="ava"></div>
         <div class="info"><div class="nm"></div><div class="cd"></div>
-          <div class="num"><span class="nv"></span><span class="pu"></span></div><div class="sub"></div></div>
+          <div class="num"><span class="nv"></span><span class="pu"></span></div><div class="sub"></div>
+          <div class="pbar"><i></i></div></div>
       </div>
       <div class="stat-strip">
         <div class="st"><span class="sl">ยอดขาย</span><span class="sv s1"></span></div>
@@ -810,8 +830,8 @@ function buildPodium(){
         <div class="st"><span class="sl">อัพเซล</span><span class="sv s6"></span></div>
       </div></div>
     <div class="pod-pair">
-      <div class="pod pod-sm" data-slot="1"><div class="glow"></div><div class="medal">🥈</div><div class="ava"></div><div class="nm"></div><div class="cd"></div><div class="num"><span class="nv"></span><span class="pu"></span></div><div class="sub"></div></div>
-      <div class="pod pod-sm" data-slot="2"><div class="glow"></div><div class="medal">🥉</div><div class="ava"></div><div class="nm"></div><div class="cd"></div><div class="num"><span class="nv"></span><span class="pu"></span></div><div class="sub"></div></div>
+      <div class="pod pod-sm" data-slot="1"><div class="glow"></div><div class="medal">🥈</div><div class="ava"></div><div class="nm"></div><div class="cd"></div><div class="num"><span class="nv"></span><span class="pu"></span></div><div class="sub"></div><div class="pbar"><i></i></div></div>
+      <div class="pod pod-sm" data-slot="2"><div class="glow"></div><div class="medal">🥉</div><div class="ava"></div><div class="nm"></div><div class="cd"></div><div class="num"><span class="nv"></span><span class="pu"></span></div><div class="sub"></div><div class="pbar"><i></i></div></div>
     </div>`;
   _podInit=true;
 }
@@ -829,6 +849,11 @@ function renderPodium(top,M,instant){
     slot.querySelector('.sub').textContent=M.sub(o.a);
     slot.querySelector('.pu').textContent=' '+M.unit;
     setNum(slot.querySelector('.nv'),o.v,v=>M.fmt(v),instant||changed);
+    // แถบ % ของเป้า (เฉพาะหมวดเป้าหมาย โหมด %) — เต็มแถบ = 100% ของเป้า
+    const pbar=slot.querySelector('.pbar');
+    if(pbar){ const showBar=curMetric==='target'&&targetView==='pct';
+      pbar.style.display=showBar?'block':'none';
+      if(showBar) pbar.querySelector('i').style.width=Math.min(100,Math.max(2,o.v))+'%'; }
     if(i===0){const a=o.a; // [#1] โปรไฟล์แชมป์ครบทุกมุม
       slot.querySelector('.s1').textContent=baht(a.sales)+'฿';
       slot.querySelector('.s2').textContent=nf(a.bills);
@@ -849,7 +874,9 @@ function buildRow(id){
 }
 function updateRow(el,o,rank,max,M,instant){
   el.querySelector('.pos').textContent=rank;
-  const bar=el.querySelector('.bar i');bar.style.width=Math.max(3,o.v/max*100)+'%';bar.style.background=M.color;
+  // หมวดเป้าหมาย (โหมด %): แถบ = % ของเป้าจริง (เต็ม=100%) · หมวดอื่น: เทียบกับคนสูงสุด
+  const barPct=(curMetric==='target'&&targetView==='pct')?Math.min(100,o.v):o.v/max*100;
+  const bar=el.querySelector('.bar i');bar.style.width=Math.max(3,barPct)+'%';bar.style.background=M.color;
   el.querySelector('.star').textContent=perfect(o.a)?' ⭐':'';
   el.querySelector('.sub').textContent=M.sub(o.a);
   const n=el.querySelector('.val .n');n.style.color=M.color;
@@ -875,8 +902,9 @@ function renderList(rest,max,M,instant,startRank){
 function renderRank(){
   document.getElementById('returnsBar').style.display=(curMetric==='returns'&&curRange==='cycle')?'flex':'none';
   document.getElementById('leaveBar').style.display=(curMetric==='leave'&&curRange==='cycle')?'flex':'none';
+  document.getElementById('targetBar').style.display=(curMetric==='target'&&curRange==='cycle')?'flex':'none';
   const M=METRICS[curMetric];
-  const list=AGG.filter(teamMatch).filter(M.keep).map(a=>({a,v:M.val(a)})).filter(o=>curMetric==='answer'?o.a.calls>0:o.v>0).sort((p,q)=>q.v-p.v);
+  const list=AGG.filter(teamMatch).filter(M.keep).map(a=>({a,v:M.val(a)})).filter(o=>curMetric==='answer'?o.a.calls>0:(curMetric==='target'?true:o.v>0)).sort((p,q)=>q.v-p.v);
   const max=Math.max(1,...list.map(o=>o.v));
   const instant=lastMetric!==curMetric;lastMetric=curMetric;
   if(!list.length){document.getElementById('feat').innerHTML='';_podInit=false;Object.keys(rowMap).forEach(id=>rowMap[id].remove());rowMap={};document.getElementById('restScroll').innerHTML='<div class="msg"><i class="fa-solid fa-inbox"></i>ยังไม่มีข้อมูลในช่วงนี้</div>';return;}
@@ -917,6 +945,14 @@ document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',
   b.classList.add('active');curMetric=b.dataset.m;renderKpis();renderRank();
 }));
 document.getElementById('refresh').addEventListener('click',()=>load());
+// ── หมวดเป้าหมาย: สลับดู % ที่ทำได้ ↔ เป้าที่ตั้งไว้ ──
+document.querySelectorAll('#targetBar button[data-tv]').forEach(b=>b.addEventListener('click',()=>{
+  if(targetView===b.dataset.tv)return;
+  targetView=b.dataset.tv;
+  document.querySelectorAll('#targetBar button[data-tv]').forEach(x=>x.classList.toggle('active',x.dataset.tv===targetView));
+  lastMetric='__toggle__';   // บังคับ instant (ไม่ animate ข้ามหน่วย % ↔ ฿) + kpi รีเฟรช label/หน่วย
+  renderKpis(); renderRank();
+}));
 
 // ── Cycle picker (รอบบิล 26-25: เลือกปี + เดือน) ──
 const cYear=document.getElementById('cycYear'), cMonth=document.getElementById('cycMonth');
@@ -1170,6 +1206,7 @@ document.addEventListener('click',e=>{   // แตะที่อื่น (น�
 // ===== Export → เลือกหมวดเอง → Excel ชีตเดียว (แต่ละหมวด = 1 คอลัมน์ ค่าตรงๆ · เรียงตามรหัส) =====
 const EXPORT_METRICS=[   // ค่าหลักของแต่ละหมวด (cyc:true = เฉพาะโหมดรอบเดือน)
   {key:'sales',  title:'ยอดขาย (฿)',    t:'money', cyc:false, g:a=>a.sales},
+  {key:'target', title:'% เป้า',         t:'pct',   cyc:true,  g:a=>{const t=TARGETS_VIEW[a.id]||0; return t?a.sales/t*100:0;}},
   {key:'talk',   title:'Talktime รวม',  t:'time',  cyc:false, g:a=>a.talk},
   {key:'avgtalk',title:'เฉลี่ย/สาย',     t:'time',  cyc:false, g:a=>a.qual?a.talk/a.qual:0},
   {key:'answer', title:'รับสาย %',       t:'pct',   cyc:false, g:a=>a.calls?a.answered/a.calls*100:0},
