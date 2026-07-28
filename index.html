@@ -256,8 +256,9 @@ body.modal-open{overflow:hidden}   /* popup incentive เปิดอยู่ �
 .tabs button:hover{transform:translateY(-2px);color:var(--ink)}
 .tabs button .d{width:10px;height:10px;border-radius:50%;background:var(--ac);box-shadow:0 0 10px var(--ac)}
 .tabs button.active{color:#fff;border-color:transparent;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1.5px var(--ac),0 8px 20px -6px var(--ac)}
-.tabs .cycle-only{display:none}
+.tabs .cycle-only,.tabs .multi-only{display:none}
 .tabs.cycle .cycle-only{display:flex}
+.tabs.multiday .multi-only{display:flex}   /* /วัน คำนวณจากช่วงได้ → โผล่ทุกช่วง >1 วัน */
 
 /* BOARD: ซ้าย featured | ขวา list */
 .board{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;align-items:stretch;position:relative}
@@ -452,8 +453,9 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
     <button data-m="answer" style="--ac:var(--blue)"><span class="d"></span>รับสาย %</button>
     <button data-m="aov" style="--ac:var(--violet)"><span class="d"></span>AOV</button>
     <button data-m="upsell" style="--ac:#ff7eb3"><span class="d"></span>ยอดอัพเซล</button>
-    <button data-m="talkday" class="cycle-only" style="--ac:var(--teal)"><span class="d"></span>Talktime/วัน</button>
-    <button data-m="callday" class="cycle-only" style="--ac:var(--blue)"><span class="d"></span>สายโทร/วัน</button>
+    <button data-m="talkday" class="multi-only" style="--ac:var(--teal)"><span class="d"></span>Talktime/วัน</button>
+    <button data-m="callday" class="multi-only" style="--ac:var(--blue)"><span class="d"></span>สายโทร/วัน</button>
+    <button data-m="ansday" class="multi-only" style="--ac:#38bdf8"><span class="d"></span>รับสาย/วัน</button>
     <button data-m="returns" class="cycle-only" style="--ac:#f87171"><span class="d"></span>ยอดตีกลับ</button>
     <button data-m="leave" class="cycle-only" style="--ac:#fbbf24"><span class="d"></span>วันลา</button>
   </div>
@@ -680,6 +682,7 @@ const METRICS={
   upsell:{unit:'฿',color:'#ff7eb3',val:a=>a.upsum,fmt:v=>baht(v),sub:a=>`${nf(a.upcnt)} ครั้ง · เฉลี่ย ${a.upcnt?baht(a.upsum/a.upcnt):'-'}`,keep:a=>a.upsum>0},
   talkday:{unit:'/วัน',color:'var(--teal)',val:a=>a.workTalk/(a.workDays||1),fmt:v=>fmtTime(v),sub:a=>`${nf(a.workDays)} วันทำงาน · รวม ${fmtTime(a.workTalk)}`,keep:a=>a.workCalls>0},
   callday:{unit:'สาย/วัน',color:'var(--blue)',val:a=>a.workCalls/(a.workDays||1),fmt:v=>nf(v),sub:a=>`${nf(a.workDays)} วันทำงาน · รวม ${nf(a.workCalls)} สาย`,keep:a=>a.workCalls>0},
+  ansday:{unit:'รับ/วัน',color:'#38bdf8',val:a=>a.workAns/(a.workDays||1),fmt:v=>nf(v),sub:a=>`${nf(a.workDays)} วันทำงาน · รับ ${nf(a.workAns)} สาย`,keep:a=>a.workCalls>0},
   returns:{unit:'฿ ตีกลับ',color:'#f87171',val:a=>RETURNS_VIEW[a.id]||0,fmt:v=>baht(v),sub:a=>'ยอดตีกลับของรอบนี้',keep:a=>true},
   leave:{unit:'วันลา',color:'#fbbf24',val:a=>LEAVE_VIEW[a.id]||0,fmt:v=>fmtDays(v),sub:a=>'วันลาของรอบนี้ (หัวหน้ากรอก)',keep:a=>true},
 };
@@ -688,8 +691,22 @@ let _loadSeq=0;
 function showLoading(b){const el=document.getElementById('boardLoad');if(el)el.classList.toggle('on',b);}
 // รวมยอดฝั่ง server (RPC dashboard_agg) → ดึง ~25 แถวแทนแถวดิบหลักหมื่น = เร็ว
 // silent=true → ไม่โชว์ spinner (ใช้ตอน realtime/poll auto-refresh กันกระพริบ)
+// ช่วง >1 วัน = โชว์แท็บ /วัน ได้ (คำนวณจากช่วง) · returns/leave ยังเฉพาะรอบเดือน
+function isMultiDay(r){ return (Date.parse(r.end)-Date.parse(r.start)) > 86400000; }
+function metricAllowed(m,md){
+  if(m==='talkday'||m==='callday'||m==='ansday') return md;
+  if(m==='returns'||m==='leave')   return curRange==='cycle';
+  return true;
+}
 async function load(silent){
   const r=getRange(); if(!r)return;
+  // ── โชว์/ซ่อนแท็บ /วัน ตามความยาวช่วง + เด้ง metric กลับ 'talk' ถ้าแท็บที่ดูอยู่ถูกซ่อน ──
+  const md=isMultiDay(r);
+  document.getElementById('tabs').classList.toggle('multiday',md);
+  if(!metricAllowed(curMetric,md)){
+    curMetric='talk';
+    document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.m==='talk'));
+  }
   setErr(''); document.getElementById('rangeLabel').textContent=r.label;
   const seq=++_loadSeq;                 // กันผลลัพธ์ช่วงเก่ามาทับตอนสลับเร็วๆ
   if(!silent) showLoading(true);
@@ -701,7 +718,7 @@ async function load(silent){
     if(seq!==_loadSeq)return;            // มี load ใหม่กว่าแล้ว → ทิ้งผลเก่า
     AGG=(data||[]).map(a=>({id:a.employee_id,calls:a.calls,answered:a.answered,talk:Number(a.talk)||0,qual:a.qual,
       bills:a.bills,paidBills:a.paid_bills,sales:Number(a.sales)||0,upcnt:a.upcnt,upsum:Number(a.upsum)||0,days:a.active_days||1,
-      workTalk:Number(a.work_talk)||0,workCalls:a.work_calls||0,workDays:a.work_days||0}));
+      workTalk:Number(a.work_talk)||0,workCalls:a.work_calls||0,workDays:a.work_days||0,workAns:a.work_answered||0}));
     EXPECT_WD=expectedWorkDays(r);
     if(curRange==='cycle'){
       document.getElementById('rangeLabel').textContent=r.label+' · '+EXPECT_WD+' วันทำงาน';
@@ -933,10 +950,7 @@ enhanceSelect(cYear); enhanceSelect(cMonth);
 let lastCycleKey='';
 function setCycleTabs(on){
   document.getElementById('tabs').classList.toggle('cycle',on);
-  if(!on && (curMetric==='talkday'||curMetric==='callday'||curMetric==='returns'||curMetric==='leave')){   // ออกโหมด → เด้งกลับ talk
-    curMetric='talk';
-    document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.m==='talk'));
-  }
+  // การเด้ง metric กลับ 'talk' ถ้าแท็บถูกซ่อน ย้ายไปทำรวมที่ load() (คุมทั้ง /วัน และ returns/leave)
 }
 function exitCycle(){
   document.getElementById('cyclePick').classList.remove('active');
@@ -1161,13 +1175,14 @@ const EXPORT_METRICS=[   // ค่าหลักของแต่ละหม�
   {key:'answer', title:'รับสาย %',       t:'pct',   cyc:false, g:a=>a.calls?a.answered/a.calls*100:0},
   {key:'aov',    title:'AOV (฿)',        t:'money', cyc:false, g:a=>a.paidBills?a.sales/a.paidBills:0},
   {key:'upsell', title:'ยอดอัพเซล (฿)',  t:'money', cyc:false, g:a=>a.upsum},
-  {key:'talkday',title:'Talktime/วัน',   t:'time',  cyc:true,  g:a=>a.workDays?a.workTalk/a.workDays:0},
-  {key:'callday',title:'สาย/วัน',        t:'num1',  cyc:true,  g:a=>a.workDays?a.workCalls/a.workDays:0},
+  {key:'talkday',title:'Talktime/วัน',   t:'time',  cyc:true, md:true, g:a=>a.workDays?a.workTalk/a.workDays:0},
+  {key:'callday',title:'สาย/วัน',        t:'num1',  cyc:true, md:true, g:a=>a.workDays?a.workCalls/a.workDays:0},
+  {key:'ansday', title:'รับสาย/วัน',      t:'num1',  cyc:true, md:true, g:a=>a.workDays?a.workAns/a.workDays:0},
   {key:'returns',title:'ยอดตีกลับ (฿)',  t:'money', cyc:true,  g:a=>RETURNS_VIEW[a.id]||0},
   {key:'leave',  title:'วันลา (วัน)',     t:'days',  cyc:true,  g:a=>LEAVE_VIEW[a.id]||0},
 ];
 let expOrder=[];   // ลำดับหมวดตามที่กดเลือก (คุมลำดับคอลัมน์ในไฟล์)
-function availMetrics(){ return EXPORT_METRICS.filter(m=>!m.cyc||curRange==='cycle'); }
+function availMetrics(){ const r=getRange(); const md=r&&isMultiDay(r); return EXPORT_METRICS.filter(m=>!m.cyc||curRange==='cycle'||(m.md&&md)); }
 function closeExp(){ document.getElementById('expModal').classList.remove('on'); document.body.classList.remove('modal-open'); }
 function expSync(){
   const n=expOrder.length;
