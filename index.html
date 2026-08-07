@@ -375,9 +375,30 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   <div class="gate-card">
     <div class="gate-ico"><i class="fa-solid fa-lock"></i></div>
     <h2>CRM Dashboard</h2>
-    <p>ใส่รหัสผ่านเพื่อเข้าดูรายงาน</p>
-    <input id="gatePw" type="password" inputmode="numeric" placeholder="รหัสผ่าน" autocomplete="off">
-    <button id="gateBtn">เข้าสู่ระบบ</button>
+
+    <!-- โหมดสแกน (เมื่อลงทะเบียน Face/Touch ID ในเครื่องนี้แล้ว) -->
+    <div id="gateBioWrap" style="display:none">
+      <p>แตะเพื่อยืนยันตัวตนด้วย Face / Touch ID</p>
+      <button id="gateBio" class="gate-bio"><i class="fa-solid fa-fingerprint"></i><span>เข้าด้วย Face / Touch ID</span></button>
+      <button id="gateUsePw" type="button" class="gate-link">ใช้รหัสผ่านแทน</button>
+    </div>
+
+    <!-- โหมดรหัสผ่าน (สำรองเสมอ) -->
+    <div id="gatePwWrap">
+      <p>ใส่รหัสผ่านเพื่อเข้าดูรายงาน</p>
+      <input id="gatePw" type="password" inputmode="numeric" placeholder="รหัสผ่าน" autocomplete="off">
+      <button id="gateBtn">เข้าสู่ระบบ</button>
+      <button id="gateUseBio" type="button" class="gate-link" style="display:none"><i class="fa-solid fa-fingerprint"></i>&nbsp;เข้าด้วย Face / Touch ID</button>
+    </div>
+
+    <!-- ชวนลงทะเบียนสแกน หลังใส่รหัสถูกครั้งแรก -->
+    <div id="gateEnroll" style="display:none">
+      <div class="gate-ico gate-ico-bio"><i class="fa-solid fa-fingerprint"></i></div>
+      <p style="margin-top:2px">เปิดใช้ <b>Face / Touch ID</b> ไว้เข้าครั้งหน้าแบบไม่ต้องพิมพ์รหัสไหม?</p>
+      <button id="gateEnrollYes" class="gate-bio"><i class="fa-solid fa-fingerprint"></i><span>เปิดใช้เลย</span></button>
+      <button id="gateEnrollSkip" type="button" class="gate-link">ข้ามไปก่อน</button>
+    </div>
+
     <div id="gateErr"></div>
   </div>
 </div>
@@ -400,21 +421,112 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 #gateErr{min-height:20px;margin-top:12px;font-size:.85rem;color:#fb7185}
 .gate-shake{animation:gshake .4s}
 @keyframes gshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.gate-bio{width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:10px;
+  font-family:'Kanit';font-size:1rem;font-weight:600;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,#6d5cf0,#34d399);border:none;border-radius:13px;padding:14px;transition:.16s}
+.gate-bio:hover{filter:brightness(1.08)}
+.gate-bio:disabled{opacity:.6;cursor:default}
+.gate-bio i{font-size:1.25rem}
+.gate-link{display:inline-block;margin-top:14px;background:none;border:none;color:#aab4cd;font-family:'Kanit';
+  font-size:.85rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.gate-link:hover{color:#eef2fb}
+.gate-ico-bio{background:linear-gradient(135deg,#34d399,#6d5cf0)}
 </style>
 <script>
 (function(){
-  var PW='65164416', KEY='dash_ok';
-  function start(){ window.__dashUnlocked=true; var g=document.getElementById('gate'); if(g)g.style.display='none'; if(window.__startDash)window.__startDash(); }
-  if(sessionStorage.getItem(KEY)==='1'){ start(); return; }
-  function tryPw(){
-    var v=document.getElementById('gatePw').value.trim();
-    if(v===PW){ sessionStorage.setItem(KEY,'1'); start(); }
-    else{ var c=document.querySelector('.gate-card'); c.classList.remove('gate-shake'); void c.offsetWidth; c.classList.add('gate-shake');
-      document.getElementById('gateErr').textContent='รหัสผ่านไม่ถูกต้อง'; document.getElementById('gatePw').select(); }
+  var PW='65164416', KEY='dash_ok', CRED='dash_bio_cred';
+  var $=function(id){return document.getElementById(id);};
+  function start(){ window.__dashUnlocked=true; var g=$('gate'); if(g)g.style.display='none'; if(window.__startDash)window.__startDash(); }
+
+  // ===== WebAuthn helpers (สแกนนิ้ว/สแกนหน้าผ่าน platform authenticator) =====
+  // หมายเหตุ: static page ไม่มี server → ใช้ WebAuthn เป็น "ด่านชีวมิติในเครื่อง"
+  // (บังคับเครื่องปลด Face/Touch ให้ผ่านก่อน) ระดับกันเท่ารหัสฝังเดิม แต่สะดวกกว่า
+  function b64uEnc(buf){ var b=new Uint8Array(buf),s=''; for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+  function b64uDec(str){ str=String(str).replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4)str+='='; var s=atob(str),b=new Uint8Array(s.length); for(var i=0;i<s.length;i++)b[i]=s.charCodeAt(i); return b.buffer; }
+  function rand(n){ var a=new Uint8Array(n); crypto.getRandomValues(a); return a.buffer; }
+  function hasCred(){ try{ return !!localStorage.getItem(CRED); }catch(e){ return false; } }
+  function clearCred(){ try{ localStorage.removeItem(CRED); }catch(e){} }
+
+  async function bioAvail(){
+    if(!window.PublicKeyCredential||!navigator.credentials||!window.isSecureContext) return false;
+    try{ return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }catch(e){ return false; }
   }
-  document.getElementById('gateBtn').addEventListener('click',tryPw);
-  document.getElementById('gatePw').addEventListener('keydown',function(e){ if(e.key==='Enter')tryPw(); });
-  document.getElementById('gatePw').focus();
+  async function bioRegister(){
+    var cred=await navigator.credentials.create({publicKey:{
+      challenge:rand(32),
+      rp:{name:'CRM Dashboard'},                                  // ไม่ตั้ง rp.id → เบราว์เซอร์ใช้โดเมนหน้าเองอัตโนมัติ
+      user:{id:rand(16),name:'owner',displayName:'เจ้าของรายงาน'},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},
+      timeout:60000, attestation:'none'
+    }});
+    if(!cred||!cred.rawId) throw new Error('no-cred');
+    localStorage.setItem(CRED,b64uEnc(cred.rawId));
+  }
+  async function bioLogin(){
+    var idStr; try{ idStr=localStorage.getItem(CRED); }catch(e){ idStr=null; }
+    if(!idStr) throw new Error('no-enrolled');
+    await navigator.credentials.get({publicKey:{
+      challenge:rand(32),
+      allowCredentials:[{type:'public-key',id:b64uDec(idStr)}],
+      userVerification:'required', timeout:60000
+    }});
+    // resolve = ผ่านชีวมิติในเครื่องแล้ว
+  }
+  function bioErrMsg(e){
+    if(!e) return 'สแกนไม่สำเร็จ ลองใหม่หรือใช้รหัส';
+    if(e.name==='NotAllowedError') return 'ยกเลิกหรือหมดเวลา · ลองใหม่ หรือใช้รหัสผ่าน';
+    if(e.name==='InvalidStateError') return 'อุปกรณ์นี้เปิดใช้ไว้แล้ว';
+    if(e.name==='SecurityError') return 'สภาพแวดล้อมไม่ปลอดภัย · ใช้รหัสผ่านแทน';
+    return 'สแกนไม่สำเร็จ ('+(e.name||'error')+') · ใช้รหัสผ่านได้';
+  }
+
+  function err(t,shake){ var el=$('gateErr'); if(el)el.textContent=t||''; if(shake){ var c=document.querySelector('.gate-card'); c.classList.remove('gate-shake'); void c.offsetWidth; c.classList.add('gate-shake'); } }
+  function showPwMode(){ $('gateBioWrap').style.display='none'; $('gateEnroll').style.display='none'; $('gatePwWrap').style.display=''; err(''); setTimeout(function(){ try{$('gatePw').focus();}catch(e){} },30); }
+  function showBioMode(){ $('gatePwWrap').style.display='none'; $('gateEnroll').style.display='none'; $('gateBioWrap').style.display=''; err(''); }
+  function showEnroll(){ $('gatePwWrap').style.display='none'; $('gateBioWrap').style.display='none'; $('gateEnroll').style.display=''; err(''); }
+
+  function tryPw(){
+    var v=$('gatePw').value.trim();
+    if(v!==PW){ err('รหัสผ่านไม่ถูกต้อง',true); $('gatePw').select(); return; }
+    sessionStorage.setItem(KEY,'1');
+    if(window.__bioAvail && !hasCred()) showEnroll();   // รองรับ แต่ยังไม่ลงทะเบียน → ชวนเปิดใช้
+    else start();
+  }
+  async function doBioLogin(){
+    var btn=$('gateBio'); btn.disabled=true; err('กำลังยืนยันตัวตน…');
+    try{ await bioLogin(); sessionStorage.setItem(KEY,'1'); start(); }
+    catch(e){
+      err(bioErrMsg(e),true); btn.disabled=false;
+      // credential หาย/ถูกลบจากเครื่อง → เคลียร์แล้วให้ใช้รหัส
+      if(e&&(e.message==='no-enrolled'||e.name==='InvalidStateError')){ clearCred(); showPwMode(); }
+    }
+  }
+  async function doEnroll(){
+    var b=$('gateEnrollYes'); b.disabled=true; err('กำลังตั้งค่า…');
+    try{ await bioRegister(); start(); }
+    catch(e){ err(bioErrMsg(e)); b.disabled=false; }   // ลงทะเบียนไม่สำเร็จก็กด "ข้ามไปก่อน" เข้าได้ (รหัสถูกแล้ว)
+  }
+
+  (async function initGate(){
+    $('gateBtn').addEventListener('click',tryPw);
+    $('gatePw').addEventListener('keydown',function(e){ if(e.key==='Enter')tryPw(); });
+    $('gateBio').addEventListener('click',doBioLogin);
+    $('gateUsePw').addEventListener('click',showPwMode);
+    $('gateUseBio').addEventListener('click',showBioMode);
+    $('gateEnrollYes').addEventListener('click',doEnroll);
+    $('gateEnrollSkip').addEventListener('click',start);
+
+    if(sessionStorage.getItem(KEY)==='1'){ start(); return; }
+
+    window.__bioAvail=await bioAvail();
+    if(window.__bioAvail && hasCred()){
+      $('gateUseBio').style.display='';   // อยู่โหมดรหัสก็สลับกลับมาสแกนได้
+      showBioMode();                      // ลงทะเบียนแล้ว → เริ่มที่ปุ่มสแกน
+    }else{
+      showPwMode();                       // ยังไม่ลงทะเบียน/ไม่รองรับ → รหัสผ่านล้วน
+    }
+  })();
 })();
 </script>
 
