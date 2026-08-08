@@ -425,6 +425,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 </div>
 <style>
 #gate{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;
+  touch-action:manipulation;   /* ปิด double-tap zoom (กดเลขซ้ำเร็วๆ ไม่ซูม) · pinch ยังได้ */
   background:
     radial-gradient(1000px 640px at 50% -18%, rgba(240,201,107,.18), transparent 60%),
     radial-gradient(760px 520px at 10% 112%, rgba(246,169,60,.13), transparent 55%),
@@ -475,7 +476,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:22px auto 2px;max-width:272px}
 .key{aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.055);
   color:#f4f7ff;font-family:'Kanit';font-size:1.55rem;font-weight:400;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:transform .08s,background .14s,border-color .14s;-webkit-tap-highlight-color:transparent;user-select:none}
+  display:flex;align-items:center;justify-content:center;transition:transform .08s,background .14s,border-color .14s;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:manipulation}
 .key:hover{background:rgba(255,255,255,.1)}
 .key:active{transform:scale(.9);background:rgba(246,169,60,.34);border-color:rgba(247,205,114,.55)}
 .key-aux{border-color:transparent;background:transparent;font-size:1.4rem;color:#e0be7a}
