@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CRM Dashboard · Realtime</title>
+<title>FACE ADVANCE · CRM Dashboard</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0d18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FACE ADVANCE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -33,7 +41,8 @@ body{font-family:'Kanit',sans-serif;color:var(--ink);min-height:100vh;-webkit-fo
 .topbar{padding:24px 22px 6px}
 .topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:14px}
-.brand .logo{width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,#6d5cf0,#34d399);display:grid;place-items:center;color:#fff;font-size:22px;box-shadow:0 10px 30px rgba(109,92,240,.45)}
+.brand .logo{width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,rgba(247,205,114,.16),rgba(240,168,60,.1));display:grid;place-items:center;overflow:hidden;box-shadow:0 10px 30px rgba(212,175,95,.28);border:1px solid rgba(247,205,114,.18)}
+.brand .logo img{width:40px;height:auto;filter:drop-shadow(0 3px 8px rgba(212,175,95,.35))}
 .brand h1{font-size:1.5rem;font-weight:800;letter-spacing:-.5px}
 .brand p{font-size:.86rem;color:var(--ink2);font-weight:300;margin-top:-3px}
 .live{display:inline-flex;align-items:center;gap:9px;font-size:.86rem;font-weight:600;background:rgba(255,255,255,.05);border:1px solid var(--line);padding:9px 16px;border-radius:999px;color:var(--ink2)}
@@ -373,13 +382,13 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 <!-- ===== PASSWORD GATE (กันคนทั่วไป — static page บน GitHub กันแบบเบาๆ ไม่ใช่ security ระดับสูง) ===== -->
 <div id="gate">
   <div class="gate-card">
-    <div class="gate-ico"><i class="fa-solid fa-lock"></i></div>
-    <h2>CRM Dashboard</h2>
+    <div class="gate-hero"><img src="assets/fmark.png" alt="FACE ADVANCE" class="gate-mark"></div>
+    <div class="gate-word"><span class="w-face">FACE</span><span class="w-adv">ADVANCE</span></div>
 
     <!-- โหมดสแกน (เมื่อลงทะเบียน Face/Touch ID ในเครื่องนี้แล้ว) -->
     <div id="gateBioWrap" style="display:none">
       <p>แตะเพื่อยืนยันตัวตนด้วย Face / Touch ID</p>
-      <button id="gateBio" class="gate-bio"><i class="fa-solid fa-fingerprint"></i><span>เข้าด้วย Face / Touch ID</span></button>
+      <button id="gateBio" class="gate-bio"><span class="bio-swap bioIcon"></span><span>เข้าด้วย Face / Touch ID</span></button>
       <button id="gateUsePw" type="button" class="gate-link">ใช้รหัสผ่านแทน</button>
     </div>
 
@@ -397,7 +406,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
         <button type="button" class="key" data-k="7">7</button>
         <button type="button" class="key" data-k="8">8</button>
         <button type="button" class="key" data-k="9">9</button>
-        <button type="button" class="key key-aux" data-k="bio" id="keyBio" style="visibility:hidden" aria-label="เข้าด้วย Face / Touch ID"><i class="fa-solid fa-fingerprint"></i></button>
+        <button type="button" class="key key-aux" data-k="bio" id="keyBio" style="visibility:hidden" aria-label="เข้าด้วย Face / Touch ID"><span class="bio-swap bioIcon"></span></button>
         <button type="button" class="key" data-k="0">0</button>
         <button type="button" class="key key-aux" data-k="back" aria-label="ลบ"><i class="fa-solid fa-delete-left"></i></button>
       </div>
@@ -405,9 +414,9 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 
     <!-- ชวนลงทะเบียนสแกน หลังใส่รหัสถูกครั้งแรก -->
     <div id="gateEnroll" style="display:none">
-      <div class="gate-ico gate-ico-bio"><i class="fa-solid fa-fingerprint"></i></div>
+      <div class="gate-ico gate-ico-bio"><span class="bio-swap bioIcon"></span></div>
       <p style="margin-top:2px">เปิดใช้ <b>Face / Touch ID</b> ไว้เข้าครั้งหน้าแบบไม่ต้องพิมพ์รหัสไหม?</p>
-      <button id="gateEnrollYes" class="gate-bio"><i class="fa-solid fa-fingerprint"></i><span>เปิดใช้เลย</span></button>
+      <button id="gateEnrollYes" class="gate-bio"><span class="bio-swap bioIcon"></span><span>เปิดใช้เลย</span></button>
       <button id="gateEnrollSkip" type="button" class="gate-link">ข้ามไปก่อน</button>
     </div>
 
@@ -415,54 +424,83 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   </div>
 </div>
 <style>
-#gate{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;
-  background:radial-gradient(900px 500px at 50% -10%,rgba(124,92,255,.18),transparent 60%),#080b16;
+#gate{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;
+  background:
+    radial-gradient(1000px 640px at 50% -18%, rgba(240,201,107,.18), transparent 60%),
+    radial-gradient(760px 520px at 10% 112%, rgba(246,169,60,.13), transparent 55%),
+    #0a0d18;
   font-family:'Kanit',sans-serif;color:#eef2fb}
-.gate-card{width:min(90vw,360px);text-align:center;background:#121829;border:1px solid rgba(255,255,255,.08);
-  border-radius:20px;padding:38px 30px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
-.gate-ico{width:64px;height:64px;margin:0 auto 18px;border-radius:18px;display:grid;place-items:center;
-  background:linear-gradient(135deg,#6d5cf0,#34d399);font-size:26px;color:#fff;box-shadow:0 12px 30px rgba(109,92,240,.45)}
-.gate-card h2{font-size:1.35rem;font-weight:800}
-.gate-card p{color:#aab4cd;font-size:.9rem;font-weight:300;margin:4px 0 22px}
-#gatePw{width:100%;text-align:center;font-family:'Kanit';font-size:1.1rem;letter-spacing:3px;color:#eef2fb;
-  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:13px;outline:none;transition:.16s}
-#gatePw:focus{border-color:#8b5cf6;background:rgba(255,255,255,.07)}
-#gateBtn{width:100%;margin-top:14px;font-family:'Kanit';font-size:1rem;font-weight:600;color:#fff;cursor:pointer;
-  background:linear-gradient(135deg,#6d5cf0,#8b5cf6);border:none;border-radius:13px;padding:13px;transition:.16s}
-#gateBtn:hover{filter:brightness(1.08)}
-#gateErr{min-height:20px;margin-top:12px;font-size:.85rem;color:#fb7185}
+.gate-card{position:relative;width:min(92vw,372px);text-align:center;
+  background:linear-gradient(180deg,rgba(25,30,47,.82),rgba(15,19,32,.92));
+  border:1px solid rgba(240,205,130,.16);border-radius:28px;padding:34px 28px 30px;
+  box-shadow:0 34px 90px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+/* โลโก้ hero */
+.gate-hero{width:104px;height:104px;margin:0 auto 12px;display:grid;place-items:center;border-radius:50%;
+  background:radial-gradient(circle at 50% 42%,rgba(240,201,107,.2),transparent 70%)}
+.gate-mark{width:80px;height:auto;filter:drop-shadow(0 8px 20px rgba(212,175,95,.4))}
+.gate-word{display:flex;justify-content:center;gap:.42em;font-weight:800;letter-spacing:.15em;font-size:1.2rem;line-height:1}
+.gate-word .w-face{color:#f4f7ff}
+.gate-word .w-adv{background:linear-gradient(90deg,#d9a94e,#f7cd72,#f6a93b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.gate-ico{width:66px;height:66px;margin:26px auto 16px;border-radius:20px;display:grid;place-items:center;
+  font-size:27px;color:#241a05;box-shadow:0 14px 34px rgba(212,175,95,.42)}
+.gate-card p{color:#9aa6c0;font-size:.9rem;font-weight:300;margin:16px 0 20px}
+#gateErr{min-height:20px;margin-top:14px;font-size:.85rem;color:#fb7185}
 .gate-shake{animation:gshake .4s}
 @keyframes gshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 .gate-bio{width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:10px;
-  font-family:'Kanit';font-size:1rem;font-weight:600;color:#fff;cursor:pointer;
-  background:linear-gradient(135deg,#6d5cf0,#34d399);border:none;border-radius:13px;padding:14px;transition:.16s}
-.gate-bio:hover{filter:brightness(1.08)}
-.gate-bio:disabled{opacity:.6;cursor:default}
-.gate-bio i{font-size:1.25rem}
-.gate-link{display:inline-block;margin-top:14px;background:none;border:none;color:#aab4cd;font-family:'Kanit';
-  font-size:.85rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
-.gate-link:hover{color:#eef2fb}
-.gate-ico-bio{background:linear-gradient(135deg,#34d399,#6d5cf0)}
-/* คีย์แพดสไตล์ iPhone lock screen */
-.pin-dots{display:flex;justify-content:center;gap:15px;margin:10px 0 2px;min-height:15px}
-.pin-dot{width:13px;height:13px;border-radius:50%;border:1.6px solid rgba(255,255,255,.4);background:transparent;transition:.14s}
-.pin-dot.on{background:#eef2fb;border-color:#eef2fb;box-shadow:0 0 10px rgba(238,242,251,.45)}
+  font-family:'Kanit';font-size:1rem;font-weight:700;color:#241a05;cursor:pointer;
+  background:linear-gradient(135deg,#f7d081,#eda93c);border:none;border-radius:14px;padding:15px;transition:.16s;
+  box-shadow:0 12px 28px rgba(237,169,60,.3)}
+.gate-bio:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.gate-bio:active{transform:translateY(0)}
+.gate-bio:disabled{opacity:.6;cursor:default;transform:none;filter:none}
+.gate-bio .bio-swap{font-size:1.32rem}
+/* ไอคอนสแกนสลับ Face ⇄ ลายนิ้วมือ (crossfade ทุก 3 วิ) */
+.bio-swap{position:relative;display:inline-grid;place-items:center;width:1em;height:1em;vertical-align:-.16em}
+.bio-swap .ic{grid-area:1/1;transition:opacity .45s ease,transform .45s ease}
+.bio-swap svg.ic{width:1em;height:1em}
+.bio-swap .ic-face{opacity:0;transform:scale(.6)}
+#gate.show-face .bio-swap .ic-finger{opacity:0;transform:scale(.6)}
+#gate.show-face .bio-swap .ic-face{opacity:1;transform:scale(1)}
+.gate-link{display:inline-block;margin-top:16px;background:none;border:none;color:#9aa6c0;font-family:'Kanit';
+  font-size:.85rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;transition:.14s}
+.gate-link:hover{color:#f7cd72}
+.gate-ico-bio{background:linear-gradient(135deg,#f7cd72,#f0a83c)}
+/* คีย์แพดสไตล์ iPhone lock screen · โทนทองแบรนด์ */
+.pin-dots{display:flex;justify-content:center;gap:16px;margin:12px 0 2px;min-height:15px}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:1.6px solid rgba(246,201,107,.42);background:transparent;transition:.14s}
+.pin-dot.on{background:#f7cd72;border-color:#f7cd72;box-shadow:0 0 12px rgba(247,205,114,.55)}
 .pin-shake{animation:gshake .4s}
-.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px auto 2px;max-width:270px}
-.key{aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);
-  color:#eef2fb;font-family:'Kanit';font-size:1.55rem;font-weight:400;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:transform .08s,background .14s;-webkit-tap-highlight-color:transparent;user-select:none}
-.key:hover{background:rgba(255,255,255,.09)}
-.key:active{transform:scale(.9);background:rgba(139,92,246,.4)}
-.key-aux{border-color:transparent;background:transparent;font-size:1.35rem;color:#aab4cd}
-.key-aux:hover{background:rgba(255,255,255,.06)}
-.key-aux:active{background:rgba(255,255,255,.12);transform:scale(.9)}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:22px auto 2px;max-width:272px}
+.key{aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.055);
+  color:#f4f7ff;font-family:'Kanit';font-size:1.55rem;font-weight:400;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:transform .08s,background .14s,border-color .14s;-webkit-tap-highlight-color:transparent;user-select:none}
+.key:hover{background:rgba(255,255,255,.1)}
+.key:active{transform:scale(.9);background:rgba(246,169,60,.34);border-color:rgba(247,205,114,.55)}
+.key-aux{border-color:transparent;background:transparent;font-size:1.4rem;color:#e0be7a}
+.key-aux:hover{background:rgba(247,205,114,.1)}
+.key-aux:active{background:rgba(247,205,114,.18);transform:scale(.9)}
 </style>
 <script>
 (function(){
   var PW='65164416', KEY='dash_ok', CRED='dash_bio_cred';
   var $=function(id){return document.getElementById(id);};
-  function start(){ window.__dashUnlocked=true; var g=$('gate'); if(g)g.style.display='none'; if(window.__startDash)window.__startDash(); }
+  function start(){ window.__dashUnlocked=true; if(window.__bioSwap){clearInterval(window.__bioSwap);window.__bioSwap=null;} var g=$('gate'); if(g)g.style.display='none'; if(window.__startDash)window.__startDash(); }
+
+  // ไอคอนสแกน = ลายนิ้วมือ (FA) + Face ID (SVG วาดเอง) ซ้อนกัน crossfade สลับทุก 3 วิ
+  var SWAP_HTML='<i class="fa-solid fa-fingerprint ic ic-finger"></i>'+
+    '<svg class="ic ic-face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+
+    '<path d="M3 8V6a3 3 0 0 1 3-3h2"/><path d="M16 3h2a3 3 0 0 1 3 3v2"/>'+
+    '<path d="M21 16v2a3 3 0 0 1-3 3h-2"/><path d="M8 21H6a3 3 0 0 1-3-3v-2"/>'+
+    '<path d="M9.3 10.4v1.1"/><path d="M14.7 10.4v1.1"/><path d="M12 10v3l-1.1 0"/>'+
+    '<path d="M9.2 15.4c1.3 1 4.3 1 5.6 0"/></svg>';
+  function initBioSwap(){
+    var els=document.querySelectorAll('.bioIcon');
+    for(var i=0;i<els.length;i++) els[i].innerHTML=SWAP_HTML;
+    if(window.__bioSwap)clearInterval(window.__bioSwap);
+    window.__bioSwap=setInterval(function(){ var g=$('gate'); if(g)g.classList.toggle('show-face'); },3000);
+  }
 
   // ===== WebAuthn helpers (สแกนนิ้ว/สแกนหน้าผ่าน platform authenticator) =====
   // หมายเหตุ: static page ไม่มี server → ใช้ WebAuthn เป็น "ด่านชีวมิติในเครื่อง"
@@ -561,6 +599,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 
   (async function initGate(){
     renderDots();
+    initBioSwap();
     $('keypad').addEventListener('click',function(e){
       var b=e.target.closest('.key'); if(!b)return;
       var k=b.getAttribute('data-k');
@@ -587,7 +626,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 
 <header class="topbar"><div class="wrap">
   <div class="brand">
-    <div class="logo"><i class="fa-solid fa-bolt-lightning"></i></div>
+    <div class="logo"><img src="assets/fmark.png" alt="FACE ADVANCE"></div>
     <div><h1>CRM Dashboard</h1><p id="rangeLabel">กำลังโหลด...</p></div>
   </div>
   <span class="live" id="live"><span class="dot"></span><span id="liveTx">เชื่อมต่อ...</span></span>

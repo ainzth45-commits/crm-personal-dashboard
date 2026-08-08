@@ -1,0 +1,15 @@
+{
+  "name": "FACE ADVANCE · CRM Dashboard",
+  "short_name": "FACE ADVANCE",
+  "description": "รายงานส่วนตัว · CRM Dashboard",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0d18",
+  "theme_color": "#0a0d18",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
