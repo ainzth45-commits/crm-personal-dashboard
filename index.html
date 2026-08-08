@@ -383,12 +383,24 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
       <button id="gateUsePw" type="button" class="gate-link">ใช้รหัสผ่านแทน</button>
     </div>
 
-    <!-- โหมดรหัสผ่าน (สำรองเสมอ) -->
+    <!-- โหมดรหัสผ่าน (สำรองเสมอ) · คีย์แพดสไตล์ iPhone -->
     <div id="gatePwWrap">
       <p>ใส่รหัสผ่านเพื่อเข้าดูรายงาน</p>
-      <input id="gatePw" type="password" inputmode="numeric" placeholder="รหัสผ่าน" autocomplete="off">
-      <button id="gateBtn">เข้าสู่ระบบ</button>
-      <button id="gateUseBio" type="button" class="gate-link" style="display:none"><i class="fa-solid fa-fingerprint"></i>&nbsp;เข้าด้วย Face / Touch ID</button>
+      <div id="pinDots" class="pin-dots"></div>
+      <div id="keypad" class="keypad">
+        <button type="button" class="key" data-k="1">1</button>
+        <button type="button" class="key" data-k="2">2</button>
+        <button type="button" class="key" data-k="3">3</button>
+        <button type="button" class="key" data-k="4">4</button>
+        <button type="button" class="key" data-k="5">5</button>
+        <button type="button" class="key" data-k="6">6</button>
+        <button type="button" class="key" data-k="7">7</button>
+        <button type="button" class="key" data-k="8">8</button>
+        <button type="button" class="key" data-k="9">9</button>
+        <button type="button" class="key key-aux" data-k="bio" id="keyBio" style="visibility:hidden" aria-label="เข้าด้วย Face / Touch ID"><i class="fa-solid fa-fingerprint"></i></button>
+        <button type="button" class="key" data-k="0">0</button>
+        <button type="button" class="key key-aux" data-k="back" aria-label="ลบ"><i class="fa-solid fa-delete-left"></i></button>
+      </div>
     </div>
 
     <!-- ชวนลงทะเบียนสแกน หลังใส่รหัสถูกครั้งแรก -->
@@ -431,6 +443,20 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   font-size:.85rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .gate-link:hover{color:#eef2fb}
 .gate-ico-bio{background:linear-gradient(135deg,#34d399,#6d5cf0)}
+/* คีย์แพดสไตล์ iPhone lock screen */
+.pin-dots{display:flex;justify-content:center;gap:15px;margin:10px 0 2px;min-height:15px}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:1.6px solid rgba(255,255,255,.4);background:transparent;transition:.14s}
+.pin-dot.on{background:#eef2fb;border-color:#eef2fb;box-shadow:0 0 10px rgba(238,242,251,.45)}
+.pin-shake{animation:gshake .4s}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px auto 2px;max-width:270px}
+.key{aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);
+  color:#eef2fb;font-family:'Kanit';font-size:1.55rem;font-weight:400;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:transform .08s,background .14s;-webkit-tap-highlight-color:transparent;user-select:none}
+.key:hover{background:rgba(255,255,255,.09)}
+.key:active{transform:scale(.9);background:rgba(139,92,246,.4)}
+.key-aux{border-color:transparent;background:transparent;font-size:1.35rem;color:#aab4cd}
+.key-aux:hover{background:rgba(255,255,255,.06)}
+.key-aux:active{background:rgba(255,255,255,.12);transform:scale(.9)}
 </style>
 <script>
 (function(){
@@ -482,24 +508,49 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   }
 
   function err(t,shake){ var el=$('gateErr'); if(el)el.textContent=t||''; if(shake){ var c=document.querySelector('.gate-card'); c.classList.remove('gate-shake'); void c.offsetWidth; c.classList.add('gate-shake'); } }
-  function showPwMode(){ $('gateBioWrap').style.display='none'; $('gateEnroll').style.display='none'; $('gatePwWrap').style.display=''; err(''); setTimeout(function(){ try{$('gatePw').focus();}catch(e){} },30); }
+  function showPwMode(){ $('gateBioWrap').style.display='none'; $('gateEnroll').style.display='none'; $('gatePwWrap').style.display=''; try{ $('keyBio').style.visibility = hasCred()?'visible':'hidden'; }catch(e){} pinReset(); err(''); }
   function showBioMode(){ $('gatePwWrap').style.display='none'; $('gateEnroll').style.display='none'; $('gateBioWrap').style.display=''; err(''); }
   function showEnroll(){ $('gatePwWrap').style.display='none'; $('gateBioWrap').style.display='none'; $('gateEnroll').style.display=''; err(''); }
 
-  function tryPw(){
-    var v=$('gatePw').value.trim();
-    if(v!==PW){ err('รหัสผ่านไม่ถูกต้อง',true); $('gatePw').select(); return; }
-    sessionStorage.setItem(KEY,'1');
-    if(window.__bioAvail && !hasCred()) showEnroll();   // รองรับ แต่ยังไม่ลงทะเบียน → ชวนเปิดใช้
-    else start();
+  // ===== PIN keypad (สไตล์ iPhone lock) — กดครบความยาว = ตรวจทันที ไม่ต้องกดยืนยัน =====
+  var pin='';
+  function renderDots(){ var n=PW.length, h=''; for(var i=0;i<n;i++)h+='<span class="pin-dot'+(i<pin.length?' on':'')+'"></span>'; $('pinDots').innerHTML=h; }
+  function pinReset(){ pin=''; renderDots(); }
+  function pinShake(){ var d=$('pinDots'); if(!d)return; d.classList.remove('pin-shake'); void d.offsetWidth; d.classList.add('pin-shake'); }
+  function pinPush(d){ if(pin.length>=PW.length)return; pin+=d; renderDots(); if(pin.length===PW.length)setTimeout(checkPin,140); }
+  function pinBack(){ if(pin.length){ pin=pin.slice(0,-1); renderDots(); err(''); } }
+  function checkPin(){
+    if(pin===PW){
+      sessionStorage.setItem(KEY,'1');
+      if(window.__bioAvail && !hasCred()) showEnroll();   // รองรับ แต่ยังไม่ลงทะเบียน → ชวนเปิดใช้
+      else start();
+    }else{
+      err('รหัสผ่านไม่ถูกต้อง'); pinShake(); setTimeout(pinReset,420);
+    }
   }
+
+  // ยืนยันชีวมิติ (ใช้ทั้งปุ่มบนหน้า bio และปุ่มลายนิ้วมือบน numpad) — ต้องมาจากการแตะ (user gesture)
   async function doBioLogin(){
-    var btn=$('gateBio'); btn.disabled=true; err('กำลังยืนยันตัวตน…');
+    err('กำลังยืนยันตัวตน…');
+    var b=$('gateBio'); if(b)b.disabled=true;
+    var kb=$('keyBio'); if(kb)kb.disabled=true;
     try{ await bioLogin(); sessionStorage.setItem(KEY,'1'); start(); }
     catch(e){
-      err(bioErrMsg(e),true); btn.disabled=false;
+      err(bioErrMsg(e),true); if(b)b.disabled=false; if(kb)kb.disabled=false;
       // credential หาย/ถูกลบจากเครื่อง → เคลียร์แล้วให้ใช้รหัส
       if(e&&(e.message==='no-enrolled'||e.name==='InvalidStateError')){ clearCred(); showPwMode(); }
+    }
+  }
+  // สแกนอัตโนมัติทันทีที่เปิดเว็บ — สำเร็จ=เข้าเลย · ไม่สำเร็จ (รวม iOS ที่ต้องแตะเอง)=ตกไปหน้ารหัส numpad
+  async function autoBio(){
+    showBioMode();
+    var b=$('gateBio'); if(b)b.disabled=true;
+    err('กำลังยืนยันตัวตน…');
+    try{ await bioLogin(); sessionStorage.setItem(KEY,'1'); start(); }
+    catch(e){
+      if(e&&(e.message==='no-enrolled')){ clearCred(); showPwMode(); return; }
+      showPwMode();   // numpad มีปุ่มลายนิ้วมือให้แตะสแกนใหม่เอง
+      err(e&&e.name==='NotAllowedError' ? 'แตะปุ่มลายนิ้วมือเพื่อสแกน หรือใส่รหัสผ่าน' : bioErrMsg(e));
     }
   }
   async function doEnroll(){
@@ -509,23 +560,27 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   }
 
   (async function initGate(){
-    $('gateBtn').addEventListener('click',tryPw);
-    $('gatePw').addEventListener('keydown',function(e){ if(e.key==='Enter')tryPw(); });
+    renderDots();
+    $('keypad').addEventListener('click',function(e){
+      var b=e.target.closest('.key'); if(!b)return;
+      var k=b.getAttribute('data-k');
+      if(k==='back')pinBack(); else if(k==='bio')doBioLogin(); else pinPush(k);
+    });
+    document.addEventListener('keydown',function(e){   // รองรับคีย์บอร์ดจริงบนเดสก์ท็อป
+      if($('gatePwWrap').style.display==='none')return;
+      if(e.key>='0'&&e.key<='9')pinPush(e.key);
+      else if(e.key==='Backspace')pinBack();
+    });
     $('gateBio').addEventListener('click',doBioLogin);
     $('gateUsePw').addEventListener('click',showPwMode);
-    $('gateUseBio').addEventListener('click',showBioMode);
     $('gateEnrollYes').addEventListener('click',doEnroll);
     $('gateEnrollSkip').addEventListener('click',start);
 
     if(sessionStorage.getItem(KEY)==='1'){ start(); return; }
 
     window.__bioAvail=await bioAvail();
-    if(window.__bioAvail && hasCred()){
-      $('gateUseBio').style.display='';   // อยู่โหมดรหัสก็สลับกลับมาสแกนได้
-      showBioMode();                      // ลงทะเบียนแล้ว → เริ่มที่ปุ่มสแกน
-    }else{
-      showPwMode();                       // ยังไม่ลงทะเบียน/ไม่รองรับ → รหัสผ่านล้วน
-    }
+    if(window.__bioAvail && hasCred()) autoBio();   // ลงทะเบียนแล้ว → สแกนอัตโนมัติทันที
+    else showPwMode();                              // ยังไม่ลงทะเบียน/ไม่รองรับ → numpad
   })();
 })();
 </script>
