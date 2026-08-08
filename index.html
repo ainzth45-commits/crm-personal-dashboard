@@ -519,8 +519,8 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
   async function bioRegister(){
     var cred=await navigator.credentials.create({publicKey:{
       challenge:rand(32),
-      rp:{name:'CRM Dashboard'},                                  // ไม่ตั้ง rp.id → เบราว์เซอร์ใช้โดเมนหน้าเองอัตโนมัติ
-      user:{id:rand(16),name:'owner',displayName:'เจ้าของรายงาน'},
+      rp:{name:'FACE ADVANCE'},                                   // ไม่ตั้ง rp.id → เบราว์เซอร์ใช้โดเมนหน้าเองอัตโนมัติ
+      user:{id:rand(16),name:'FACE ADVANCE',displayName:'FACE ADVANCE · รายงานส่วนตัว'},
       pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
       authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},
       timeout:60000, attestation:'none'
