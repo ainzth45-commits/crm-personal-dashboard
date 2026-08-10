@@ -823,7 +823,7 @@ async function fetchRange(table,cols,r){
   return out;
 }
 let EMP={};
-async function loadEmployees(){const{data,error}=await sb.from('employees').select('employee_id,name,photo_url,team_id');if(error)throw error;data.forEach(e=>EMP[e.employee_id]={name:e.name,photo:e.photo_url,team_id:e.team_id});}
+async function loadEmployees(){const{data,error}=await sb.from('employees_public').select('employee_id,name,photo_url,team_id');if(error)throw error;data.forEach(e=>EMP[e.employee_id]={name:e.name,photo:e.photo_url,team_id:e.team_id});}
 
 // ── ตัวเลือกทีม (null = ทั้งหมด) · กรองฝั่ง client จาก EMP[id].team_id ──
 let TEAMS=[],curTeam=null;
