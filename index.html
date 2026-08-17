@@ -899,14 +899,14 @@ const METRICS={
     fmt:v=>targetView==='amount'?baht(v):v.toFixed(1),
     sub:a=>{const t=TARGETS_VIEW[a.id]||0; return `ยอด ${baht(a.sales)}฿ · เป้า ${baht(t)}฿ · ${t?(a.sales/t*100).toFixed(1):'0'}%`;},
     keep:a=>(TARGETS_VIEW[a.id]||0)>0},
-  talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>fmtTime(v),sub:a=>`เฉลี่ย ${fmtTime(a.workTalk/(a.workDays||1))}/วัน · ${nf(a.workCalls/(a.workDays||1))} สาย/วัน · ${nf(a.workDays)} วันทำงาน`,keep:a=>a.calls>0},
+  talk:{unit:'',color:'var(--teal)',val:a=>a.talk,fmt:v=>fmtTime(v),sub:a=>`เฉลี่ย ${fmtTime(a.talk/(a.days||1))}/วัน · ${nf(a.calls/(a.days||1))} สาย/วัน · ${nf(a.days)} วันทำงาน`,keep:a=>a.calls>0},
   avgtalk:{unit:'/สายคุย',color:'var(--amber)',val:a=>a.qual?a.talk/a.qual:0,fmt:v=>fmtTime(v),sub:a=>`${nf(a.qual)} สายคุย · รวม ${fmtTime(a.talk)}`,keep:a=>a.qual>0},
   answer:{unit:'%',color:'var(--blue)',val:a=>a.calls?a.answered/a.calls*100:0,fmt:v=>v.toFixed(0)+'%',sub:a=>`รับ ${nf(a.answered)}/${nf(a.calls)} สาย`,keep:a=>a.calls>0},
   aov:{unit:'฿/บิล',color:'var(--violet)',val:a=>a.paidBills?a.sales/a.paidBills:0,fmt:v=>baht(v),sub:a=>`${nf(a.paidBills)} บิลมียอด · ${baht(a.sales)}฿`,keep:a=>a.paidBills>0},
   upsell:{unit:'฿',color:'#ff7eb3',val:a=>a.upsum,fmt:v=>baht(v),sub:a=>`${nf(a.upcnt)} ครั้ง · เฉลี่ย ${a.upcnt?baht(a.upsum/a.upcnt):'-'}`,keep:a=>a.upsum>0},
-  talkday:{unit:'/วัน',color:'var(--teal)',val:a=>a.workTalk/(a.workDays||1),fmt:v=>fmtTime(v),sub:a=>`${nf(a.workDays)} วันทำงาน · รวม ${fmtTime(a.workTalk)}`,keep:a=>a.workCalls>0},
-  callday:{unit:'สาย/วัน',color:'var(--blue)',val:a=>a.workCalls/(a.workDays||1),fmt:v=>nf(v),sub:a=>`${nf(a.workDays)} วันทำงาน · รวม ${nf(a.workCalls)} สาย`,keep:a=>a.workCalls>0},
-  ansday:{unit:'รับ/วัน',color:'#38bdf8',val:a=>a.workAns/(a.workDays||1),fmt:v=>nf(v),sub:a=>`${nf(a.workDays)} วันทำงาน · รับ ${nf(a.workAns)} สาย`,keep:a=>a.workCalls>0},
+  talkday:{unit:'/วัน',color:'var(--teal)',val:a=>a.talk/(a.days||1),fmt:v=>fmtTime(v),sub:a=>`${nf(a.days)} วันทำงาน · รวม ${fmtTime(a.talk)}`,keep:a=>a.calls>0},
+  callday:{unit:'สาย/วัน',color:'var(--blue)',val:a=>a.calls/(a.days||1),fmt:v=>nf(v),sub:a=>`${nf(a.days)} วันทำงาน · รวม ${nf(a.calls)} สาย`,keep:a=>a.calls>0},
+  ansday:{unit:'รับ/วัน',color:'#38bdf8',val:a=>a.answered/(a.days||1),fmt:v=>nf(v),sub:a=>`${nf(a.days)} วันทำงาน · รับ ${nf(a.answered)} สาย`,keep:a=>a.calls>0},
   returns:{unit:'฿ ตีกลับ',color:'#f87171',val:a=>RETURNS_VIEW[a.id]||0,fmt:v=>baht(v),sub:a=>'ยอดตีกลับของรอบนี้',keep:a=>true},
   leave:{unit:'วันลา',color:'#fbbf24',val:a=>LEAVE_VIEW[a.id]||0,fmt:v=>fmtDays(v),sub:a=>'วันลาของรอบนี้ (หัวหน้ากรอก)',keep:a=>true},
 };
@@ -983,10 +983,10 @@ function kpiSpec(m,T,closers,retCount,lvCount){
                                   i2:'fa-percent',     l2:'% รับสายเฉลี่ยทั้งทีม', v2:div(T.answered,T.calls)*100, f2:v=>v.toFixed(0), u2:'%', s2:'สายที่รับ ÷ สายโทรทั้งหมด'},
     upsell:  {c:'#ff7eb3',       i1:'fa-cart-shopping',l1:'ยอดอัพเซลรวม',          v1:T.upsum, f1:baht,   u1:'฿',     s1:`${nf(T.upcnt)} ครั้ง`,
                                   i2:'fa-tags',        l2:'เฉลี่ย/ครั้ง',          v2:div(T.upsum,T.upcnt), f2:baht, u2:'฿/ครั้ง', s2:'ยอดอัพเซล ÷ จำนวนครั้ง'},
-    talkday: {c:'var(--teal)',   i1:'fa-clock',        l1:'Talktime รวม (วันทำงาน)',v1:T.workTalk, f1:fmtTime, u1:'', s1:`${nf(T.workDays)} วันทำงานรวม`,
-                                  i2:'fa-headset',     l2:'Talktime/วัน เฉลี่ยทั้งทีม', v2:div(T.workTalk,T.workDays), f2:fmtTime, u2:'/วัน', s2:'Talktime ÷ วันทำงาน'},
-    callday: {c:'var(--blue)',   i1:'fa-phone-volume', l1:'สายโทรรวม (วันทำงาน)',  v1:T.workCalls, f1:nf, u1:'สาย',  s1:`${nf(T.workDays)} วันทำงานรวม`,
-                                  i2:'fa-phone',       l2:'สาย/วัน เฉลี่ยทั้งทีม', v2:div(T.workCalls,T.workDays), f2:nf, u2:'/วัน', s2:'สายโทร ÷ วันทำงาน'},
+    talkday: {c:'var(--teal)',   i1:'fa-clock',        l1:'Talktime รวม',v1:T.talk, f1:fmtTime, u1:'', s1:`${nf(T.days)} วันทำงานรวม`,
+                                  i2:'fa-headset',     l2:'Talktime/วัน เฉลี่ยทั้งทีม', v2:div(T.talk,T.days), f2:fmtTime, u2:'/วัน', s2:'Talktime ÷ วันทำงาน'},
+    callday: {c:'var(--blue)',   i1:'fa-phone-volume', l1:'สายโทรรวม',  v1:T.calls, f1:nf, u1:'สาย',  s1:`${nf(T.days)} วันทำงานรวม`,
+                                  i2:'fa-phone',       l2:'สาย/วัน เฉลี่ยทั้งทีม', v2:div(T.calls,T.days), f2:nf, u2:'/วัน', s2:'สายโทร ÷ วันทำงาน'},
     returns: {c:'#f87171',       i1:'fa-rotate-left',  l1:'ยอดตีกลับรวม',          v1:T.returns, f1:baht, u1:'฿',    s1:`${nf(retCount)} คนมีตีกลับ`,
                                   i2:'fa-user-minus',  l2:'เฉลี่ย/คน (มีตีกลับ)',  v2:div(T.returns,retCount), f2:baht, u2:'฿/คน', s2:'ยอดตีกลับ ÷ คนที่มีตีกลับ'},
     leave:   {c:'#fbbf24',       i1:'fa-calendar-xmark', l1:'วันลารวมทั้งทีม',     v1:T.leave, f1:fmtDays, u1:'วัน', s1:`${nf(lvCount)} คนมีวันลา`,
@@ -998,8 +998,8 @@ function renderKpis(){
   const A=AGG.filter(teamMatch);
   const T=A.reduce((o,a)=>({bills:o.bills+a.bills,paid:o.paid+a.paidBills,sales:o.sales+a.sales,
     talk:o.talk+a.talk,qual:o.qual+a.qual,calls:o.calls+a.calls,answered:o.answered+a.answered,
-    upsum:o.upsum+a.upsum,upcnt:o.upcnt+a.upcnt,workTalk:o.workTalk+a.workTalk,workCalls:o.workCalls+a.workCalls,workDays:o.workDays+a.workDays}),
-    {bills:0,paid:0,sales:0,talk:0,qual:0,calls:0,answered:0,upsum:0,upcnt:0,workTalk:0,workCalls:0,workDays:0});
+    upsum:o.upsum+a.upsum,upcnt:o.upcnt+a.upcnt,days:o.days+a.days,workTalk:o.workTalk+a.workTalk,workCalls:o.workCalls+a.workCalls,workDays:o.workDays+a.workDays}),
+    {bills:0,paid:0,sales:0,talk:0,qual:0,calls:0,answered:0,upsum:0,upcnt:0,days:0,workTalk:0,workCalls:0,workDays:0});
   const closers=A.filter(a=>a.paidBills>0).length;
   const retVals=A.map(a=>RETURNS_VIEW[a.id]||0); T.returns=retVals.reduce((s,v)=>s+v,0); const retCount=retVals.filter(v=>v>0).length;
   const lvVals=A.map(a=>LEAVE_VIEW[a.id]||0); T.leave=lvVals.reduce((s,v)=>s+v,0); const lvCount=lvVals.filter(v=>v>0).length;
@@ -1419,9 +1419,9 @@ const EXPORT_METRICS=[   // ค่าหลักของแต่ละหม�
   {key:'answer', title:'รับสาย %',       t:'pct',   cyc:false, g:a=>a.calls?a.answered/a.calls*100:0},
   {key:'aov',    title:'AOV (฿)',        t:'money', cyc:false, g:a=>a.paidBills?a.sales/a.paidBills:0},
   {key:'upsell', title:'ยอดอัพเซล (฿)',  t:'money', cyc:false, g:a=>a.upsum},
-  {key:'talkday',title:'Talktime/วัน',   t:'time',  cyc:true, md:true, g:a=>a.workDays?a.workTalk/a.workDays:0},
-  {key:'callday',title:'สาย/วัน',        t:'num1',  cyc:true, md:true, g:a=>a.workDays?a.workCalls/a.workDays:0},
-  {key:'ansday', title:'รับสาย/วัน',      t:'num1',  cyc:true, md:true, g:a=>a.workDays?a.workAns/a.workDays:0},
+  {key:'talkday',title:'Talktime/วัน',   t:'time',  cyc:true, md:true, g:a=>a.days?a.talk/a.days:0},
+  {key:'callday',title:'สาย/วัน',        t:'num1',  cyc:true, md:true, g:a=>a.days?a.calls/a.days:0},
+  {key:'ansday', title:'รับสาย/วัน',      t:'num1',  cyc:true, md:true, g:a=>a.days?a.answered/a.days:0},
   {key:'returns',title:'ยอดตีกลับ (฿)',  t:'money', cyc:true,  g:a=>RETURNS_VIEW[a.id]||0},
   {key:'leave',  title:'วันลา (วัน)',     t:'days',  cyc:true,  g:a=>LEAVE_VIEW[a.id]||0},
 ];
