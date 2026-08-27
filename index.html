@@ -1526,6 +1526,7 @@ function openRtn(){
   if(curRange!=='cycle')return;
   document.getElementById('rtnCycle').textContent='· '+THMON[+cMonth.value-1]+' '+cYear.value;
   document.getElementById('rtnSearch').value=''; document.getElementById('rtnMsg').textContent='';
+  document.getElementById('rtnSave').disabled=false;   // กันปุ่มค้าง disabled จากรอบก่อน
   renderRtnList('');
   document.getElementById('rtnModal').classList.add('on'); document.body.classList.add('modal-open');
 }
@@ -1595,6 +1596,7 @@ async function saveRtn(){
     if(!res.ok||!j.ok){ msg.textContent='❌ บันทึกไม่สำเร็จ: '+(j.error||res.status); btn.disabled=false; return; }
     items.forEach(it=>RETURNS_VIEW[it.employee_id]=it.amount);   // อัปเดต local ทันที
     msg.textContent='✅ บันทึก '+j.saved+' รายการแล้ว';
+    btn.disabled=false;   // เปิดปุ่มคืน (บันทึก/อัพเดตซ้ำได้เลย ไม่ต้องรีโหลด)
     renderRank(); setTimeout(closeRtn,900);
   }catch(e){ msg.textContent='❌ '+e.message; btn.disabled=false; }
 }
@@ -1610,6 +1612,7 @@ function openLv(){
   if(curRange!=='cycle')return;
   document.getElementById('lvCycle').textContent='· '+THMON[+cMonth.value-1]+' '+cYear.value;
   document.getElementById('lvSearch').value=''; document.getElementById('lvMsg').textContent='';
+  document.getElementById('lvSave').disabled=false;   // กันปุ่มค้าง disabled จากรอบก่อน
   renderLvList('');
   document.getElementById('lvModal').classList.add('on'); document.body.classList.add('modal-open');
 }
@@ -1675,6 +1678,7 @@ async function saveLv(){
     if(!res.ok||!j.ok){ msg.textContent='❌ บันทึกไม่สำเร็จ: '+(j.error||res.status); btn.disabled=false; return; }
     items.forEach(it=>LEAVE_VIEW[it.employee_id]=it.days);   // อัปเดต local ทันที
     msg.textContent='✅ บันทึก '+j.saved+' รายการแล้ว';
+    btn.disabled=false;   // เปิดปุ่มคืน (บันทึก/อัพเดตซ้ำได้เลย ไม่ต้องรีโหลด)
     renderRank(); renderKpis(); setTimeout(closeLv,900);
   }catch(e){ msg.textContent='❌ '+e.message; btn.disabled=false; }
 }
