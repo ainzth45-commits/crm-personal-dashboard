@@ -140,12 +140,18 @@ main{padding:20px 0 40px}
 .inc-head h3{font-size:1.15rem;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .inc-head h3 span{font-size:.82rem;color:var(--muted);font-weight:500}
 .inc-head button{background:none;border:none;color:var(--ink2);font-size:1.4rem;cursor:pointer;line-height:1;padding:0 4px}
-.inc-cond{display:flex;flex-wrap:wrap;gap:10px 18px;padding:15px 22px 10px}
-.inc-cond label{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--ink2);font-weight:500}
-.inc-cond input{width:72px;font-family:var(--mono);font-size:.95rem;font-weight:700;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;padding:7px 9px;text-align:center;cursor:pointer;caret-color:transparent;user-select:none}
-.inc-cond input:focus{outline:none}
-.inc-cond input.on{border-color:var(--violet);background:rgba(167,139,250,.12);box-shadow:0 0 0 3px rgba(167,139,250,.20)}
-/* numpad ลอย (แทนปุ่มขึ้น-ลง) */
+.inc-rule{padding:14px 22px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.inc-crit{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.86rem;color:var(--ink2);font-weight:600}
+.inc-crit span{white-space:nowrap}
+.inc-tiers-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.inc-tiers{width:100%;border-collapse:collapse;font-size:.74rem;font-family:var(--mono)}
+.inc-tiers th,.inc-tiers td{padding:4px 6px;border:1px solid var(--line);text-align:right;white-space:nowrap}
+.inc-tiers th{color:var(--muted);font-weight:600;font-family:inherit}
+.inc-tiers td:first-child,.inc-tiers th:first-child{text-align:left}
+@media (max-width:480px){.inc-rule{padding:12px 14px 10px}.inc-tiers{font-size:.66rem}.inc-tiers th,.inc-tiers td{padding:3px 4px}}
+.inc-live{display:none;font-size:.78rem;font-weight:700;color:var(--amber);background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.35);border-radius:9px;padding:6px 10px;width:fit-content}
+.inc-live.on{display:block}
+.inc-emp .tierb{position:absolute;bottom:-3px;right:-3px;min-width:30px;height:30px;padding:0 7px;border-radius:999px;background:var(--gold);color:#1a1400;font-weight:800;font-size:.72rem;display:grid;place-items:center;border:3px solid var(--panel);white-space:nowrap}
 .inc-pad{position:fixed;z-index:300;width:232px;padding:12px;border-radius:18px;background:linear-gradient(160deg,rgba(32,40,63,.98),rgba(17,23,40,.98));border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 1px rgba(167,139,250,.12);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transform:translateY(-4px) scale(.95);transform-origin:top center;transition:opacity .15s,transform .15s}
 .inc-pad.on{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
 .pad-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 4px 10px;font-size:.78rem;color:var(--ink2)}
@@ -676,8 +682,8 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
     <button data-m="leave" class="cycle-only" style="--ac:#fbbf24"><span class="d"></span>วันลา</button>
   </div>
 
-  <div id="returnsBar" style="display:none"><button id="rtnAddBtn" type="button"><i class="fa-solid fa-pen-to-square"></i> เพิ่ม / อัพเดตยอดตีกลับ</button><span class="rtn-bar-note">ตีกลับของรอบนี้ · ใช้หักยอดตอนคิด incentive รอบถัดไป</span></div>
-  <div id="leaveBar" style="display:none"><button id="lvAddBtn" type="button"><i class="fa-solid fa-calendar-xmark"></i> เพิ่ม / อัพเดตวันลา</button><span class="rtn-bar-note">วันลาของรอบนี้ · หัวหน้าฝ่ายขายกรอกเอง · ใช้ในเกณฑ์ incentive ขั้น 1</span></div>
+  <div id="returnsBar" style="display:none"><button id="rtnAddBtn" type="button"><i class="fa-solid fa-pen-to-square"></i> เพิ่ม / อัพเดตยอดตีกลับ</button><span class="rtn-bar-note">ตีกลับของรอบนี้ · ใช้หักยอดตอนคิด incentive รอบนี้</span></div>
+  <div id="leaveBar" style="display:none"><button id="lvAddBtn" type="button"><i class="fa-solid fa-calendar-xmark"></i> เพิ่ม / อัพเดตวันลา</button><span class="rtn-bar-note">วันลาของรอบนี้ · หัวหน้าฝ่ายขายกรอกเอง · ใช้ในเกณฑ์ incentive On Time (ลา ≤ 2 วัน)</span></div>
   <div id="targetBar" style="display:none"><span class="tgt-seg"><button data-tv="pct" class="active" type="button">% ที่ทำได้</button><button data-tv="amount" type="button">เป้าที่ตั้งไว้</button></span><span class="rtn-bar-note">กดสลับดู — % ที่ทำได้ ↔ เป้าที่ตั้งไว้ (บาท)</span></div>
 
   <div class="board">
@@ -693,21 +699,12 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:24px 16px;f
 <div id="incModal" class="inc-modal">
   <div class="inc-card">
     <div class="inc-head"><h3>🎁 ตรวจสอบ Incentive <span id="incCycle"></span></h3><button id="incExport" class="inc-export" title="ดาวน์โหลด Excel" disabled>⬇️ Excel</button><button id="incClose" title="ปิด">✕</button></div>
-    <div class="inc-cond">
-      <label>ขั้น 1 · วันลา ≤ <input id="incLeave" type="text" inputmode="none" readonly placeholder="–"> วัน</label>
-      <label>ขั้น 2.1 · talktime/วัน ≥ <input id="incTalk" type="text" inputmode="none" readonly placeholder="–"> นาที</label>
-      <label>ขั้น 2.2 · สายโทร/วัน ≥ <input id="incCalls" type="text" inputmode="none" readonly placeholder="–"> สาย</label>
+    <div class="inc-rule">
+      <div class="inc-crit"><span>🗓️ On Time · ลาไม่เกิน 2 วัน</span><span>📞 รับสายเฉลี่ย ≥ 50 สาย/วัน</span><span>⏱️ Talktime เฉลี่ย ≥ 100 นาที/วัน</span></div>
+      <div class="inc-tiers-wrap"><table class="inc-tiers" id="incTiers"></table></div>
+      <div class="inc-note" style="padding:0;border:0">*ขั้นกำหนดจากยอดขายสุทธิของรอบนี้ (ยอดขาย + อัพเซล − ตีกลับ) · ได้เงินเฉพาะหมวดที่ผ่าน · ต่ำกว่า 150,000 ไม่ได้ incentive · เกณฑ์ตามประกาศ 9/2569</div>
+      <div class="inc-live" id="incLive">⏳ รอบยังไม่จบ · ตัวเลขยังไม่สุดท้าย</div>
     </div>
-    <div id="incPad" class="inc-pad" aria-hidden="true">
-      <div class="pad-head"><span id="padLabel">วันลา</span><b id="padVal">–</b></div>
-      <div class="pad-grid">
-        <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
-        <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
-        <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
-        <button type="button" data-k="back" class="pad-fn" title="ลบ">⌫</button><button type="button" data-k="0">0</button><button type="button" data-k="ok" class="pad-ok" title="ตกลง">✓</button>
-      </div>
-    </div>
-    <div class="inc-note">*incentive ขึ้นอยู่กับยอดขาย</div>
     <div class="inc-summary" id="incSummary"></div>
     <div class="inc-results" id="incResults"></div>
   </div>
@@ -809,7 +806,6 @@ function cycleRange(y,m){
 }
 function getRange(){ return curRange==='cycle'?cycleR : (curRange==='custom'?customR : rangeOf(curRange)); }
 const cycleKey=(y,m)=>`${y}-${pad(m)}`;                  // key รอบเดือนในตาราง returns
-function prevCycleKey(){ let y=+cYear.value, m=+cMonth.value-1; if(m<1){m=12;y--;} return cycleKey(y,m); }
 async function loadTargets(key){ const o={}; const{data,error}=await sb.from('monthly_targets').select('employee_id,target').eq('cycle',key); if(!error&&data) data.forEach(x=>o[x.employee_id]=Number(x.target)||0); return o; }
 async function loadReturns(key){ const o={}; const{data,error}=await sb.from('returns').select('employee_id,amount').eq('cycle',key); if(!error&&data) data.forEach(x=>o[x.employee_id]=Number(x.amount)||0); return o; }
 async function loadLeaves(key){ const o={}; const{data,error}=await sb.from('leaves').select('employee_id,days').eq('cycle',key); if(!error&&data) data.forEach(x=>o[x.employee_id]=Number(x.days)||0); return o; }
@@ -883,8 +879,8 @@ const avaImg=(e)=>e.photo?`<img src="${e.photo}" referrerpolicy="no-referrer" on
 
 let curRange='today',curMetric='sales',AGG=[],pollTimer=null,rtTimer=null,channel=null;
 let targetView='pct';   // หมวดเป้าหมาย: 'pct'=% ที่ทำได้ · 'amount'=เป้าที่ตั้งไว้ (บาท)
-let RETURNS_VIEW={}, RETURNS_PREV={};   // ยอดตีกลับ: รอบที่ดู (โชว์) / รอบก่อน (ใช้หักตอนคิด incentive)
-let LEAVE_VIEW={};   // วันลารอบที่ดู (หัวหน้ากรอก) — ใช้ในเกณฑ์ incentive ขั้น 1
+let RETURNS_VIEW={};   // ยอดตีกลับรอบที่ดู (โชว์ + หักตอนคิด incentive รอบเดียวกัน)
+let LEAVE_VIEW={};   // วันลารอบที่ดู (หัวหน้ากรอก) — ใช้ในเกณฑ์ incentive On Time
 let TARGETS_VIEW={};   // เป้ายอดขายรอบเดือน (monthly_targets — รอบ 26-25) โหลดเฉพาะโหมดรอบเดือน
 function fmtDays(v){ return String(Math.round((Number(v)||0)*100)/100); }   // ตัด .0 ท้าย (1.5→"1.5", 2→"2")
 const METRICS={
@@ -1223,89 +1219,74 @@ document.getElementById('cycleBtn').addEventListener('click',()=>{
 cYear.addEventListener('change',applyCycle);
 cMonth.addEventListener('change',applyCycle);
 
-// ── Incentive popup: ตรวจคนผ่านเงื่อนไขรับ incentive ประจำรอบเดือน ──
-let PREV_SALES={}, PREV_UPSELL={}, incShowZero=false, incData=null;   // ยอด/อัพเซลรอบก่อน + ข้อมูลล่าสุดสำหรับ export
-function incTier(s){   // ยอดขายรอบก่อน → [ขั้น1, talktime, สายโทร] (บาท) — เกณฑ์ฟิกในระบบ
-  if(s>400000) return [2000,1000,1000];
-  if(s>350000) return [1500,750,750];
-  if(s>300000) return [1250,625,625];
-  if(s>250000) return [1000,500,500];
-  if(s>200000) return [750,375,375];
-  if(s>150000) return [500,250,250];
-  return [0,0,0];   // ≤150,000 อดหมด
+// ── Incentive popup: คิด incentive ประจำรอบเดือน (ประกาศ 9/2569 · เกณฑ์ฟิกในระบบ · ใช้ค่าของรอบเดียวกัน) ──
+/* INC-CALC-START — ฟังก์ชันล้วน (ไม่แตะ DOM) · tests/incentive-calc.test.js ดึงช่วงนี้ไปรัน */
+const INC_RULE={maxLeave:2, minAnsPerDay:50, minTalkMinPerDay:100};   // On Time ลา ≤ 2 วัน · รับสาย ≥ 50/วัน · talktime ≥ 100 นาที/วัน
+const INC_TIERS=[   // ขั้นตามยอดขายสุทธิ (≥ min) · เงินแต่ละหมวด (บาท) · เรียงจากขั้นสูงลงต่ำ
+  {tier:6, min:400000, sales:2500, ontime:500, ans:500, talk:500},
+  {tier:5, min:350000, sales:2000, ontime:500, ans:500, talk:500},
+  {tier:4, min:300000, sales:1500, ontime:500, ans:500, talk:500},
+  {tier:3, min:250000, sales:1000, ontime:500, ans:500, talk:500},
+  {tier:2, min:200000, sales:500,  ontime:500, ans:500, talk:500},
+  {tier:1, min:150000, sales:0,    ontime:300, ans:300, talk:300},
+];
+function incCalc(p){   // p={sales,upsell,returns,leave,workDays,workAns,workTalk(วินาที)} → ขั้น + เงินแต่ละหมวด
+  const net=Math.max(0,(+p.sales||0)+(+p.upsell||0)-(+p.returns||0));
+  const t=INC_TIERS.find(x=>net>=x.min)||null;   // <150,000 = ไม่มีขั้น
+  const wd=+p.workDays||0, ansPD=wd?(+p.workAns||0)/wd:0, talkPD=wd?(+p.workTalk||0)/wd:0;   // เฉลี่ยต่อวันทำงาน (ไม่ปัด)
+  const passOn=(+p.leave||0)<=INC_RULE.maxLeave, passAns=wd>0&&ansPD>=INC_RULE.minAnsPerDay, passTalk=wd>0&&talkPD>=INC_RULE.minTalkMinPerDay*60;
+  const pay={sales:t?t.sales:0, ontime:t&&passOn?t.ontime:0, ans:t&&passAns?t.ans:0, talk:t&&passTalk?t.talk:0};
+  return {net, tier:t?t.tier:0, ansPD, talkPD, passOn, passAns, passTalk, pay, amt:pay.sales+pay.ontime+pay.ans+pay.talk};
 }
-function prevCycleRange(){   // รอบก่อนรอบที่กำลังดู (เช่น ดู มิ.ย. → ใช้ยอด พ.ค.)
-  let y=+cYear.value, m=+cMonth.value-1; if(m<1){m=12;y--;}
-  return cycleRange(y,m);
+/* INC-CALC-END */
+let incShowZero=false, incData=null;   // ข้อมูลล่าสุดสำหรับ export
+const byEmpId=(p,q)=>String(p.a.id).localeCompare(String(q.a.id),'en',{numeric:true});   // เรียงตามรหัสพนักงาน
+function incLiveCycle(){ const r=getRange(); return !!(r&&r.end&&new Date(r.end)>new Date()); }   // รอบยังไม่จบ
+function renderIncTiers(){
+  document.getElementById('incTiers').innerHTML='<tr><th>ขั้น · ยอดสุทธิ</th><th>ยอดขาย</th><th>On Time</th><th>รับสาย</th><th>Talktime</th><th>สูงสุด</th></tr>'
+    +[...INC_TIERS].reverse().map(t=>{   // แต่ละขั้น = ยอดสุทธิ ≥ min (จนถึงขั้นถัดไป) · โชว์สั้น "150,000+" ให้พอดีจอมือถือ
+      return `<tr><td>${t.tier} · ${baht(t.min)}+</td><td>${t.sales?baht(t.sales):'–'}</td><td>${baht(t.ontime)}</td><td>${baht(t.ans)}</td><td>${baht(t.talk)}</td><td>${baht(t.sales+t.ontime+t.ans+t.talk)}</td></tr>`; }).join('');
 }
 function renderIncentive(){
-  const leaveRaw=document.getElementById('incLeave').value;
-  if(leaveRaw===''){   // ยังไม่กรอกเงื่อนไขขั้น 1 → ยังไม่ตรวจ
-    document.getElementById('incSummary').textContent='';
-    document.getElementById('incResults').innerHTML='<div class="inc-empty">กรอกเงื่อนไขด้านบนเพื่อตรวจสอบ</div>';
-    return;
-  }
-  const maxLeave=+leaveRaw||0;
-  const minTalk=(+document.getElementById('incTalk').value||0)*60;   // นาที→วินาที
-  const minCalls=+document.getElementById('incCalls').value||0;
   const allRows=AGG.filter(teamMatch).map(a=>{
-    const leave=LEAVE_VIEW[a.id]||0;   // วันลา: ค่าที่หัวหน้าฝ่ายขายกรอกเอง (รองรับลาครึ่งวัน/เศษชั่วโมง) · ไม่กรอก = ลา 0
-    const tpd=a.workDays?a.workTalk/a.workDays:0, cpd=a.workDays?a.workCalls/a.workDays:0;
-    const t1=leave<=maxLeave, t2a=t1&&tpd>=minTalk, t2b=t1&&cpd>=minCalls;
-    const psales=PREV_SALES[a.id]||0, pup=PREV_UPSELL[a.id]||0, pret=RETURNS_PREV[a.id]||0;   // ยอดขาย/อัพ/ตีกลับ รอบก่อน
-    const base=psales+pup, net=Math.max(0,base-pret), tier=incTier(net);   // ยอด+อัพ−ตีกลับ แล้วเทียบเกณฑ์
-    const amt=(t1?tier[0]:0)+(t2a?tier[1]:0)+(t2b?tier[2]:0);   // รวมเงินที่คนนี้ได้
-    return {a,leave,tpd,cpd,t1,t2a,t2b,psales,pup,pret,base,net,tier,amt,count:(t1?1:0)+(t2a?1:0)+(t2b?1:0)};
-  });
-  const rows=allRows.filter(x=>x.t1);   // เฉพาะผ่านขั้น 1 (ใช้สรุปบนจอ)
-  const earners=rows.filter(r=>r.amt>0).sort((p,q)=>q.amt-p.amt||q.count-p.count||q.tpd-p.tpd);   // ได้เงินจริง
-  const zeros=rows.filter(r=>r.amt===0).sort((p,q)=>q.count-p.count||q.tpd-p.tpd);   // ผ่านเงื่อนไขแต่ยอดรอบก่อนไม่ถึง (อด)
-  const total=earners.reduce((s,r)=>s+r.amt,0);
-  incData={earners,zeros,allRows,total,maxLeave,minTalk,minCalls,cycleLabel:document.getElementById('incCycle').textContent};   // เก็บไว้ export (allRows = ทุกคนในทีมที่เลือก)
+    const sales=a.sales||0, up=a.upsum||0, ret=RETURNS_VIEW[a.id]||0, leave=LEAVE_VIEW[a.id]||0;   // ค่าของรอบที่ดูทั้งหมด · วันลาไม่กรอก = 0
+    const c=incCalc({sales,upsell:up,returns:ret,leave,workDays:a.workDays,workAns:a.workAns,workTalk:a.workTalk});
+    return {a,sales,up,ret,leave,...c};
+  }).sort(byEmpId);
+  const earners=allRows.filter(r=>r.amt>0), zeros=allRows.filter(r=>r.amt===0);
+  const total=earners.reduce((s,r)=>s+r.amt,0), live=incLiveCycle();
+  incData={earners,allRows,total,live,cycleLabel:document.getElementById('incCycle').textContent};
+  document.getElementById('incLive').classList.toggle('on',live);
   const exBtn=document.getElementById('incExport'); if(exBtn) exBtn.disabled=!allRows.length;
   document.getElementById('incSummary').innerHTML=
     `ได้ incentive: <b>${earners.length}</b> คน · รวมแจก <b>฿${baht(total)}</b>`
-    + (zeros.length?` <button id="incZeroBtn" class="inc-zerobtn">${incShowZero?'← ดูคนที่ได้ incentive':'ดูเฉพาะคนยอดไม่ถึง ('+zeros.length+')'}</button>`:'');
+    + (zeros.length?` <button id="incZeroBtn" class="inc-zerobtn">${incShowZero?'← ดูคนที่ได้ incentive':'ดูคนที่ไม่ได้ ('+zeros.length+')'}</button>`:'');
   const zb=document.getElementById('incZeroBtn');
   if(zb) zb.onclick=()=>{ incShowZero=!incShowZero; renderIncentive(); };
   const cont=document.getElementById('incResults');
-  const show=incShowZero?zeros:earners;   // กดดูคนยอดไม่ถึง = โชว์เฉพาะกลุ่มนั้น (ซ่อนคนได้)
-  if(!show.length){ cont.innerHTML='<div class="inc-empty">'+(rows.length?'— ไม่มีใครได้ incentive (ยอดรอบก่อนไม่ถึงเกณฑ์) —':'— ไม่มีใครผ่านเงื่อนไขขั้น 1 —')+'</div>'; return; }
-  const aw=(on,icon,label,amt)=>`<span class="inc-aw ${on?'on':'off'}">${icon} ${label}${on&&amt?` <b>฿${baht(amt)}</b>`:''}</span>`;
+  const show=incShowZero?zeros:earners;
+  if(!show.length){ cont.innerHTML='<div class="inc-empty">'+(allRows.length?'— ไม่มีใครได้ incentive —':'— ไม่มีข้อมูลในทีมที่เลือก —')+'</div>'; return; }
+  const aw=(on,icon,label,amt)=>`<span class="inc-aw ${on?'on':'off'}">${icon} ${label}${on?` <b>฿${baht(amt)}</b>`:''}</span>`;
   cont.innerHTML='<div class="inc-grid">'+show.map(r=>{
-    const e=EMP[r.a.id]||{name:r.a.id};
-    const z=r.amt===0;
-    return `<div class="inc-emp ${r.count===3?'full':''} ${z?'zero':''}">
-      <div class="avawrap"><div class="ava">${avaImg(e)}</div><div class="cnt">${r.count}/3</div></div>
+    const e=EMP[r.a.id]||{name:r.a.id}, z=r.amt===0, full=r.tier>0&&r.passOn&&r.passAns&&r.passTalk;
+    return `<div class="inc-emp ${full?'full':''} ${z?'zero':''}">
+      <div class="avawrap"><div class="ava">${avaImg(e)}</div><div class="tierb">${r.tier?'ขั้น '+r.tier:'–'}</div></div>
       <div class="nm">${e.name||r.a.id}</div>
-      <div class="cd">${r.a.id} · ยอด+อัพรอบก่อน ฿${baht(r.base)}${r.pret>0?` − ตีกลับ ฿${baht(r.pret)} = ฿${baht(r.net)}`:''}</div>
-      <div class="awards">${aw(true,'🎖️','ขั้น 1',r.tier[0])}${aw(r.t2a,'⏱️','Talktime',r.tier[1])}${aw(r.t2b,'📞','สายโทร',r.tier[2])}</div>
-      <div class="met">ลา ${fmtDays(r.leave)} วัน · ${fmtTime(r.tpd)}/วัน · ${nf(r.cpd)} สาย/วัน</div>
-      <div class="inc-total">${z?'ยอดไม่ถึงเกณฑ์ · ฿0':'รวม ฿'+baht(r.amt)}</div>
+      <div class="cd">${r.a.id} · สุทธิ ฿${baht(r.net)}${r.ret>0?` (ยอด+อัพ ฿${baht(r.sales+r.up)} − ตีกลับ ฿${baht(r.ret)})`:''}</div>
+      <div class="awards">${aw(r.pay.sales>0,'💰','ยอดขาย',r.pay.sales)}${aw(r.pay.ontime>0,'🗓️','On Time',r.pay.ontime)}${aw(r.pay.ans>0,'📞','รับสาย',r.pay.ans)}${aw(r.pay.talk>0,'⏱️','Talktime',r.pay.talk)}</div>
+      <div class="met">ลา ${fmtDays(r.leave)} วัน · รับ ${nf(r.ansPD)} สาย/วัน · ${fmtTime(r.talkPD)}/วัน</div>
+      <div class="inc-total">${z?(r.tier?'ไม่ผ่านเกณฑ์ · ฿0':'ยอดสุทธิไม่ถึง 150,000 · ฿0'):'รวม ฿'+baht(r.amt)}</div>
     </div>`;
   }).join('')+'</div>';
 }
-function closeInc(){ closeIncPad(); document.getElementById('incModal').classList.remove('on'); document.body.classList.remove('modal-open'); }
-async function openIncentive(){
+function closeInc(){ document.getElementById('incModal').classList.remove('on'); document.body.classList.remove('modal-open'); }
+function openIncentive(){   // ใช้ AGG + ตีกลับ + วันลา ของรอบที่ดู (โหลดไว้แล้วตอน load) → คิดได้ทันที
   document.getElementById('incCycle').textContent=document.getElementById('rangeLabel').textContent;
-  ['incLeave','incTalk','incCalls'].forEach(id=>document.getElementById(id).value='');   // ว่างเสมอเมื่อเปิดใหม่
-  closeIncPad();   // ปิดแพดถ้าค้างจากครั้งก่อน
-  incShowZero=false; PREV_SALES={}; PREV_UPSELL={}; RETURNS_PREV={};
+  incShowZero=false;
+  renderIncTiers();
   document.getElementById('incModal').classList.add('on');
   document.body.classList.add('modal-open');   // ล็อกพื้นหลังไม่ให้เลื่อน
   renderIncentive();
-  try{   // โหลดยอดขาย+ตีกลับรอบก่อน (ใช้คิดเงิน incentive) — เฉพาะตอนดูแบบรอบเดือน
-    if(curRange==='cycle'){
-      const pr=prevCycleRange();
-      const [agg, ret] = await Promise.all([
-        sb.rpc('dashboard_agg',{p_start:pr.start,p_end:pr.end}),
-        loadReturns(prevCycleKey())
-      ]);
-      if(!agg.error&&agg.data) agg.data.forEach(d=>{ PREV_SALES[d.employee_id]=+d.sales||0; PREV_UPSELL[d.employee_id]=+d.upsum||0; });
-      RETURNS_PREV=ret;
-      renderIncentive();   // re-render พร้อมเงิน
-    }
-  }catch(e){ console.error('prev-cycle sales/returns',e); }
 }
 document.getElementById('incentiveBtn').addEventListener('click',openIncentive);
 document.getElementById('incClose').addEventListener('click',closeInc);
@@ -1319,47 +1300,42 @@ async function exportIncentive(){
   const btn=document.getElementById('incExport'), old=btn.textContent; btn.disabled=true; btn.textContent='⏳ กำลังสร้าง...';
   try{
     await loadExcelJS();
-    const {earners,allRows,total,maxLeave,minTalk,minCalls,cycleLabel}=incData;
-    const list=[...allRows].sort((p,q)=>String(p.a.id).localeCompare(String(q.a.id),'en',{numeric:true}));   // ทุกคนในทีม เรียงตามรหัสพนักงาน
+    const {earners,allRows,live,cycleLabel}=incData;
+    const list=[...allRows].sort(byEmpId);   // ทุกคนในทีม เรียงตามรหัสพนักงาน
     const wb=new ExcelJS.Workbook(); wb.creator='CRM Dashboard';
     const ws=wb.addWorksheet('Incentive',{views:[{state:'frozen',ySplit:3}]});
-    const headers=['ลำดับ','รหัส','ชื่อ','ทีม','วันลา','Talktime/วัน','สายโทร/วัน','ขั้น 1','Talktime','สายโทร','ยอดขาย','อัพเซล','ตีกลับ','สุทธิ','เงินขั้น 1','เงิน Talktime','เงินสายโทร','รวม (฿)'];
-    const widths=[6,8,22,12,7,13,11,7,10,9,12,11,11,12,11,14,12,12], N=headers.length;
+    const headers=['ลำดับ','รหัส','ชื่อ','ทีม','ยอดขาย','อัพเซล','ตีกลับ','ยอดขายสุทธิ','ขั้น','วันลา','รับสาย/วัน','Talktime/วัน','เงินยอดขาย','เงิน On Time','เงินรับสาย','เงิน Talktime','รวม (฿)'];
+    const widths=[6,8,22,14,12,10,10,13,6,7,10,12,11,12,11,13,11], N=headers.length;
     ws.columns=widths.map(w=>({width:w}));
     const thin={style:'thin',color:{argb:'FFCBD5E1'}}, border={top:thin,left:thin,bottom:thin,right:thin};
-    const moneyCols=[11,12,13,14,15,16,17,18], centerCols=[1,2,5,6,7,8,9,10];
-    // title + subtitle
-    ws.mergeCells(1,1,1,N); const c1=ws.getCell(1,1); c1.value='รายงาน INCENTIVE   ·   '+cycleLabel;
+    const moneyCols=[5,6,7,8,13,14,15,16,17], payCols=[13,14,15,16], centerCols=[1,2,9,10,11,12];
+    ws.mergeCells(1,1,1,N); const c1=ws.getCell(1,1); c1.value='รายงาน INCENTIVE   ·   '+cycleLabel+(live?'   ·   รอบยังไม่จบ (ตัวเลขยังไม่สุดท้าย)':'');
     c1.font={bold:true,size:15,color:{argb:'FFFFFFFF'}}; c1.alignment={vertical:'middle',indent:1}; c1.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0F172A'}}; ws.getRow(1).height=30;
-    ws.mergeCells(2,1,2,N); const c2=ws.getCell(2,1); c2.value=`เกณฑ์: วันลา ≤ ${maxLeave} · Talktime/วัน ≥ ${Math.round(minTalk/60)} นาที · สายโทร/วัน ≥ ${minCalls}  |  ยอดคิด = ยอดขาย + อัพเซล − ตีกลับ (รอบก่อน)`;
+    ws.mergeCells(2,1,2,N); const c2=ws.getCell(2,1);
+    c2.value=`เกณฑ์ (ประกาศ 9/2569): On Time ลา ≤ ${INC_RULE.maxLeave} วัน · รับสายเฉลี่ย ≥ ${INC_RULE.minAnsPerDay} สาย/วัน · Talktime เฉลี่ย ≥ ${INC_RULE.minTalkMinPerDay} นาที/วัน  |  ขั้นจากยอดขายสุทธิ = ยอดขาย + อัพเซล − ตีกลับ (รอบเดียวกัน) · ได้เฉพาะหมวดที่ผ่าน`;
     c2.font={size:10,italic:true,color:{argb:'FF475569'}}; c2.alignment={vertical:'middle',indent:1}; ws.getRow(2).height=20;
-    // header (row 3)
     const hr=ws.getRow(3); headers.forEach((h,i)=>hr.getCell(i+1).value=h);
     hr.eachCell(c=>{ c.font={bold:true,size:10,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF334155'}}; c.alignment={vertical:'middle',horizontal:'center',wrapText:true}; c.border=border; }); hr.height=30;
-    // data
     let rn=4;
     list.forEach((r,idx)=>{
       const e=EMP[r.a.id]||{}, row=ws.getRow(rn);
-      const vals=[idx+1,r.a.id,e.name||r.a.id,teamNameOf(r.a.id),r.leave,fmtTime(r.tpd),Math.round(r.cpd),r.t1?'✓':'✗',r.t2a?'✓':'✗',r.t2b?'✓':'✗',r.psales,r.pup,r.pret,r.net,r.t1?r.tier[0]:0,r.t2a?r.tier[1]:0,r.t2b?r.tier[2]:0,r.amt];
+      const vals=[idx+1,r.a.id,e.name||r.a.id,teamNameOf(r.a.id),r.sales,r.up,r.ret,r.net,r.tier||'-',r.leave,Math.round(r.ansPD*10)/10,fmtTime(r.talkPD),r.pay.sales,r.pay.ontime,r.pay.ans,r.pay.talk,r.amt];
       vals.forEach((v,i)=>row.getCell(i+1).value=v);
       const zebra=idx%2?'FFF1F5F9':'FFFFFFFF';
-      row.eachCell((c,col)=>{ c.border=border; if(!c.font)c.font={}; c.font={size:10}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:zebra}};
+      row.eachCell((c,col)=>{ c.border=border; c.font={size:10}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:zebra}};
         c.alignment={vertical:'middle',horizontal: centerCols.includes(col)?'center':(moneyCols.includes(col)?'right':'left')};
-        if(moneyCols.includes(col)) c.numFmt='#,##0';
+        if(moneyCols.includes(col)) c.numFmt='#,##0;-#,##0;"-"';
         if(col===3) c.font={size:10,bold:true};
-        if(col===18){ c.font={size:10,bold:true,color:{argb:'FF047857'}}; }
+        if(payCols.includes(col)) c.font={size:10,bold:!!c.value,color:{argb:c.value?'FF16A34A':'FF94A3B8'}};
+        if(col===17) c.font={size:10,bold:true,color:{argb:'FF047857'}};
       });
-      // ✓/✗ color (cols 8,9,10)
-      [8,9,10].forEach(col=>{ const cell=row.getCell(col); cell.font={size:11,bold:true,color:{argb: cell.value==='✓'?'FF16A34A':'FFDC2626'}}; cell.alignment={vertical:'middle',horizontal:'center'}; });
       row.height=20; rn++;
     });
-    // total row
-    const tr=ws.getRow(rn); ws.mergeCells(rn,1,rn,10); const tc=tr.getCell(1);
-    tc.value='รวมทั้งหมด · '+list.length+' คน · ได้ incentive '+earners.length+' คน'; tc.alignment={vertical:'middle',horizontal:'right',indent:1}; tc.font={bold:true,size:11};
-    const sumCol=c=>{ let s=0; list.forEach(r=>{ s+=({11:r.psales,12:r.pup,13:r.pret,14:r.net,15:(r.t1?r.tier[0]:0),16:(r.t2a?r.tier[1]:0),17:(r.t2b?r.tier[2]:0),18:r.amt})[c]; }); return s; };
-    [11,12,13,14,15,16,17,18].forEach(col=>{ const c=tr.getCell(col); c.value=sumCol(col); c.numFmt='#,##0'; c.alignment={vertical:'middle',horizontal:'right'}; c.font={bold:true,size:11,color: col===18?{argb:'FF1A1400'}:undefined}; });
-    tr.eachCell(c=>{ c.border=border; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFDE68A'}}; }); tr.height=24;
-    // download
+    const tr=ws.getRow(rn); ws.mergeCells(rn,1,rn,4); const tc=tr.getCell(1);
+    tc.value='รวม · '+list.length+' คน · ได้ incentive '+earners.length+' คน'; tc.alignment={vertical:'middle',horizontal:'right',indent:1}; tc.font={bold:true,size:11};
+    const sumOf={5:r=>r.sales,6:r=>r.up,7:r=>r.ret,8:r=>r.net,13:r=>r.pay.sales,14:r=>r.pay.ontime,15:r=>r.pay.ans,16:r=>r.pay.talk,17:r=>r.amt};
+    Object.keys(sumOf).forEach(k=>{ const col=+k, c=tr.getCell(col); c.value=list.reduce((s,r)=>s+sumOf[k](r),0); c.numFmt='#,##0;-#,##0;"-"'; c.alignment={vertical:'middle',horizontal:'right'}; c.font={bold:true,size:11}; });
+    for(let col=1;col<=N;col++){ const c=tr.getCell(col); c.border=border; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFDE68A'}}; } tr.height=24;
     const buf=await wb.xlsx.writeBuffer();
     const fn='incentive-'+(cycleLabel.replace(/[^0-9A-Za-zก-๙]+/g,'-').replace(/^-+|-+$/g,'')||'report')+'.xlsx';
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
@@ -1369,46 +1345,6 @@ async function exportIncentive(){
 }
 document.getElementById('incExport').addEventListener('click',exportIncentive);
 document.getElementById('incModal').addEventListener('click',e=>{ if(e.target.id==='incModal') closeInc(); });
-['incLeave','incTalk','incCalls'].forEach(id=>document.getElementById(id).addEventListener('input',renderIncentive));
-
-// ===== Numpad ช่องเกณฑ์ incentive (แตะช่อง→แพดลอย แทนปุ่มขึ้น-ลง) =====
-let incPadField=null;
-const INC_PAD_LABEL={incLeave:'วันลา ≤ (วัน)',incTalk:'talktime/วัน ≥ (นาที)',incCalls:'สายโทร/วัน ≥ (สาย)'};
-function incPadSync(){ const v=incPadField?incPadField.value:''; document.getElementById('padVal').textContent=v===''?'–':v; }
-function openIncPad(id){
-  incPadField=document.getElementById(id);
-  document.querySelectorAll('.inc-cond input').forEach(i=>i.classList.toggle('on',i===incPadField));
-  document.getElementById('padLabel').textContent=INC_PAD_LABEL[id]||'';
-  const pad=document.getElementById('incPad'), r=incPadField.getBoundingClientRect(), padW=232, padH=250;
-  let left=r.left+r.width/2-padW/2;                       // จัดกลางใต้ช่อง
-  left=Math.max(8, Math.min(left, window.innerWidth-padW-8));   // ไม่ล้นจอซ้าย/ขวา
-  let top=r.bottom+8;
-  if(top+padH>window.innerHeight-8) top=Math.max(8, r.top-padH-8);   // ถ้าล้นล่าง → พลิกขึ้นบนช่อง
-  pad.style.left=left+'px'; pad.style.top=top+'px';
-  incPadSync(); pad.classList.add('on');
-}
-function closeIncPad(){
-  const pad=document.getElementById('incPad'); if(pad) pad.classList.remove('on');
-  document.querySelectorAll('.inc-cond input').forEach(i=>i.classList.remove('on')); incPadField=null;
-}
-function incPadPress(k){
-  if(!incPadField) return;
-  if(k==='ok'){ closeIncPad(); return; }
-  if(k==='back') incPadField.value=incPadField.value.slice(0,-1);
-  else { if(incPadField.value.length>=5) return; incPadField.value=(incPadField.value+k).replace(/^0+(?=\d)/,''); }   // กัน 0 นำหน้า
-  incPadSync();
-  incPadField.dispatchEvent(new Event('input',{bubbles:true}));   // → renderIncentive สด
-}
-document.body.appendChild(document.getElementById('incPad'));   // ย้ายแพดออกนอกการ์ด (กัน overflow:hidden ตัด)
-document.querySelectorAll('.inc-cond input').forEach(inp=>{
-  inp.addEventListener('click',e=>{ e.stopPropagation(); openIncPad(inp.id); });
-});
-document.querySelectorAll('#incPad button').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); incPadPress(b.dataset.k); }));
-document.addEventListener('click',e=>{   // แตะที่อื่น (นอกแพด/นอกช่อง) → ปิดแพด
-  if(!incPadField) return;
-  if(e.target.closest('#incPad') || e.target.closest('.inc-cond input')) return;
-  closeIncPad();
-});
 
 // ===== Export → เลือกหมวดเอง → Excel ชีตเดียว (แต่ละหมวด = 1 คอลัมน์ ค่าตรงๆ · เรียงตามรหัส) =====
 const EXPORT_METRICS=[   // ค่าหลักของแต่ละหมวด (cyc:true = เฉพาะโหมดรอบเดือน)
